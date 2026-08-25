@@ -1,0 +1,17 @@
+# IDE
+.idea/
+.vs/
+.vscode/
+
+# Build
+cmake-build-*/
+build/
+out/
+CMakeFiles/
+CMakeCache.txt
+
+# macOS
+.DS_Store
+
+# vcpkg
+vcpkg_installed/

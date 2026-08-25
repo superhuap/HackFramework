@@ -1,0 +1,25 @@
+{
+  "name" : "hackframework",
+  "version-string" : "1.0.0",
+  "builtin-baseline" : "00c5775211f45cd08b37fce0484b4cb940e422ab",
+  "dependencies" : [ {
+    "name" : "imgui",
+    "features": [
+      "win32-binding",
+      "opengl3-binding",
+      "vulkan-binding",
+      "dx9-binding",
+      "dx10-binding",
+      "dx11-binding",
+      "dx12-binding",
+      "freetype"
+    ],
+    "version>=" : "1.92.8#1"
+  }, {
+    "name" : "spdlog",
+    "version>=" : "1.17.0#1"
+  }, {
+    "name" : "minhook",
+    "version>=" : "1.3.4"
+  } ]
+}

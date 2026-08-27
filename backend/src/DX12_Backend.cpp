@@ -168,28 +168,75 @@ namespace
 
         D3D12_COMMAND_QUEUE_DESC queueDesc = {};
         if (g_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&g_commandQueue)) != S_OK)
+        {
+            CleanupDeviceD3D12();
             return false;
+        }
 
         IDXGISwapChain1* swapChain1 = nullptr;
         if (CreateDXGIFactory1(IID_PPV_ARGS(&g_factory)) != S_OK)
+        {
+            CleanupDeviceD3D12();
             return false;
+        }
         if (g_factory->CreateSwapChainForHwnd(g_commandQueue, hWnd, &sd, nullptr, nullptr, &swapChain1) != S_OK)
+        {
+            CleanupDeviceD3D12();
             return false;
+        }
         if (swapChain1->QueryInterface(IID_PPV_ARGS(&g_swapChain)) != S_OK)
+        {
+            swapChain1->Release();
+            CleanupDeviceD3D12();
             return false;
+        }
         swapChain1->Release();
+
+        return true;
+    }
+
+    bool EnsureRtvDescriptorHeap()
+    {
+        if (g_rtvDescHeap)
+            return true;
+
+        D3D12_DESCRIPTOR_HEAP_DESC rtvDesc = {};
+        rtvDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+        rtvDesc.NumDescriptors = MAX_BACK_BUFFERS;
+        rtvDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        rtvDesc.NodeMask = 1;
+        if (g_device->CreateDescriptorHeap(&rtvDesc, IID_PPV_ARGS(&g_rtvDescHeap)) != S_OK)
+            return false;
+
+        const SIZE_T rtvDescriptorSize =
+            g_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+        D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = g_rtvDescHeap->GetCPUDescriptorHandleForHeapStart();
+        for (UINT i = 0; i < MAX_BACK_BUFFERS; ++i)
+        {
+            g_renderTargetDescriptor[i] = rtvHandle;
+            rtvHandle.ptr += rtvDescriptorSize;
+        }
 
         return true;
     }
 
     void CreateRenderTarget(IDXGISwapChain3* pSwapChain)
     {
+        if (!EnsureRtvDescriptorHeap())
+            return;
+
         DXGI_SWAP_CHAIN_DESC sd;
         pSwapChain->GetDesc(&sd);
         const UINT bufferCount = sd.BufferCount < MAX_BACK_BUFFERS ? sd.BufferCount : MAX_BACK_BUFFERS;
 
         for (UINT i = 0; i < bufferCount; ++i)
         {
+            if (g_renderTargetResource[i])
+            {
+                g_renderTargetResource[i]->Release();
+                g_renderTargetResource[i] = nullptr;
+            }
+
             ID3D12Resource* pBackBuffer = nullptr;
             if (SUCCEEDED(pSwapChain->GetBuffer(i, IID_PPV_ARGS(&pBackBuffer))))
             {
@@ -223,22 +270,8 @@ namespace
         {
             if (SUCCEEDED(pSwapChain->GetDevice(IID_PPV_ARGS(&g_device))))
             {
-                D3D12_DESCRIPTOR_HEAP_DESC rtvDesc = {};
-                rtvDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-                rtvDesc.NumDescriptors = MAX_BACK_BUFFERS;
-                rtvDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-                rtvDesc.NodeMask = 1;
-                if (g_device->CreateDescriptorHeap(&rtvDesc, IID_PPV_ARGS(&g_rtvDescHeap)) != S_OK)
+                if (!EnsureRtvDescriptorHeap())
                     return;
-
-                const SIZE_T rtvDescriptorSize =
-                    g_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-                D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = g_rtvDescHeap->GetCPUDescriptorHandleForHeapStart();
-                for (UINT i = 0; i < MAX_BACK_BUFFERS; ++i)
-                {
-                    g_renderTargetDescriptor[i] = rtvHandle;
-                    rtvHandle.ptr += rtvDescriptorSize;
-                }
 
                 D3D12_DESCRIPTOR_HEAP_DESC srvDesc = {};
                 srvDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
@@ -365,9 +398,9 @@ namespace
                                pCreationNodeMask, ppPresentQueue);
     }
 
-    void(WINAPI * oExecuteCommandLists)(ID3D12CommandQueue*, UINT, ID3D12CommandList*) = nullptr;
+    void(WINAPI * oExecuteCommandLists)(ID3D12CommandQueue*, UINT, ID3D12CommandList* const*) = nullptr;
     void WINAPI Hook_ExecuteCommandLists(ID3D12CommandQueue* pCommandQueue, UINT NumCommandLists,
-                                         ID3D12CommandList* ppCommandLists)
+                                         ID3D12CommandList* const* ppCommandLists)
     {
         if (!g_commandQueue)
             g_commandQueue = pCommandQueue;

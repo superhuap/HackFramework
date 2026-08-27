@@ -296,7 +296,7 @@ namespace
             ImGui_ImplWin32_NewFrame();
             ImGui::NewFrame();
 
-            menu::Menu::GetInstance().Render();
+            Menu::Render();
 
             ImGui::Render();
 
@@ -420,7 +420,7 @@ namespace
 
 bool DX12_Backend::Initialize(HWND hWnd)
 {
-    if (!menu::Menu::GetInstance().Initialize(hWnd))
+    if (!Menu::Initialize(hWnd))
         return false;
 
     if (!CreateDeviceD3D12(GetConsoleWindow()))
@@ -506,7 +506,7 @@ void DX12_Backend::Shutdown()
             ImGui_ImplDX12_Shutdown();
     }
 
-    menu::Menu::GetInstance().Shutdown();
+    Menu::Shutdown();
 
     g_srvHeapAlloc.Destroy();
     CleanupDeviceD3D12();

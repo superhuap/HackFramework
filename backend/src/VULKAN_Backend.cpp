@@ -396,8 +396,6 @@ namespace
         VkQueue graphicQueue = VK_NULL_HANDLE;
         const bool queueSupportsGraphic = DoesQueueSupportGraphic(queue, &graphicQueue);
 
-        menu::Menu::GetInstance().Initialize(g_hwnd);
-
         for (uint32_t i = 0; i < pPresentInfo->swapchainCount; ++i)
         {
             VkSwapchainKHR swapchain = pPresentInfo->pSwapchains[i];
@@ -460,7 +458,7 @@ namespace
             ImGui_ImplWin32_NewFrame();
             ImGui::NewFrame();
 
-            menu::Menu::GetInstance().Render();
+            Menu::Render();
 
             ImGui::Render();
 
@@ -518,6 +516,9 @@ namespace
 bool VULKAN_Backend::Initialize(HWND hWnd)
 {
     g_hwnd = hWnd;
+
+    if (!Menu::Initialize(hWnd))
+        return false;
 
     if (!CreateDeviceVK())
     {

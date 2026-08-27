@@ -108,7 +108,7 @@ namespace
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
-        menu::Menu::GetInstance().Render();
+        Menu::Render();
 
         ImGui::EndFrame();
         if (pDevice->BeginScene() == D3D_OK)
@@ -125,7 +125,7 @@ namespace
 
 bool DX9_Backend::Initialize(HWND hWnd)
 {
-    if (!menu::Menu::GetInstance().Initialize(hWnd))
+    if (!Menu::Initialize(hWnd))
         return false;
 
     if (!CreateDeviceD3D9(GetConsoleWindow()))
@@ -174,7 +174,7 @@ void DX9_Backend::Shutdown()
             ImGui_ImplDX9_Shutdown();
     }
 
-    menu::Menu::GetInstance().Shutdown();
+    Menu::Shutdown();
     CleanupDeviceD3D9();
 
     LOG_INFO("DirectX9 Backend shutdown complete");

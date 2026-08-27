@@ -26,7 +26,7 @@ bool OPENGL_Backend::Initialize(HWND hWnd)
 {
     s_instance = this;
 
-    if (!menu::Menu::GetInstance().Initialize(hWnd))
+    if (!Menu::Initialize(hWnd))
         return false;
 
     HMODULE openGL32 = GetModuleHandleA("opengl32.dll");
@@ -65,7 +65,7 @@ void OPENGL_Backend::Shutdown()
             ImGui_ImplOpenGL3_Shutdown();
     }
 
-    menu::Menu::GetInstance().Shutdown();
+    Menu::Shutdown();
 
     s_instance = nullptr;
     LOG_INFO("OpenGL Backend shutdown complete");
@@ -82,7 +82,7 @@ BOOL WINAPI OPENGL_Backend::Hook_wglSwapBuffers(HDC hdc)
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
-        menu::Menu::GetInstance().Render();
+        Menu::Render();
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

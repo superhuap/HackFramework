@@ -107,7 +107,7 @@ namespace
             ImGui_ImplWin32_NewFrame();
             ImGui::NewFrame();
 
-            menu::Menu::GetInstance().Render();
+            Menu::Render();
 
             ImGui::Render();
 
@@ -195,7 +195,7 @@ namespace
 
 bool DX10_Backend::Initialize(HWND hWnd)
 {
-    if (!menu::Menu::GetInstance().Initialize(hWnd))
+    if (!Menu::Initialize(hWnd))
         return false;
 
     if (!CreateDeviceD3D10(GetConsoleWindow()))
@@ -293,7 +293,7 @@ void DX10_Backend::Shutdown()
             ImGui_ImplDX10_Shutdown();
     }
 
-    menu::Menu::GetInstance().Shutdown();
+    Menu::Shutdown();
     CleanupDeviceD3D10();
 
     LOG_INFO("DirectX10 Backend shutdown complete");

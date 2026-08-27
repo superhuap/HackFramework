@@ -10,16 +10,10 @@
 #include "utils/InputHook.h"
 #include "utils/Logger.h"
 
-namespace menu
+namespace Menu
 {
 
-    Menu& Menu::GetInstance()
-    {
-        static Menu instance;
-        return instance;
-    }
-
-    bool Menu::Initialize(HWND hWnd)
+    bool Initialize(HWND hWnd)
     {
         if (ImGui::GetCurrentContext())
             return true;
@@ -43,7 +37,7 @@ namespace menu
         return true;
     }
 
-    void Menu::Render()
+    void Render()
     {
         if (!Utils::Input::menu_visible.load())
             return;
@@ -51,7 +45,7 @@ namespace menu
         ImGui::ShowDemoWindow();
     }
 
-    void Menu::Shutdown()
+    void Shutdown()
     {
         if (!ImGui::GetCurrentContext())
             return;
@@ -63,4 +57,4 @@ namespace menu
         LOG_INFO("ImGui context destroyed");
     }
 
-} // namespace menu
+} // namespace Menu

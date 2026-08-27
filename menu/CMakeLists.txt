@@ -7,6 +7,16 @@ file(
 
 add_library(Menu STATIC ${src})
 
+target_include_directories(Menu PUBLIC include)
+
+target_link_libraries(Menu PUBLIC
+        imgui::imgui
+)
+
+target_link_libraries(Menu PRIVATE
+        Utils
+)
+
 set_target_properties(Menu PROPERTIES
         FOLDER "Libraries"
 )

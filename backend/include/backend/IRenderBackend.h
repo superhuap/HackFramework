@@ -6,7 +6,6 @@
 #define HACKFRAMEWORK_IRENDERBACKEND_H
 
 #include <windows.h>
-#include <imgui.h>
 
 class IRenderBackend
 {
@@ -15,7 +14,6 @@ public:
 
     virtual bool Initialize(HWND hWnd) = 0;
     virtual void Shutdown() = 0;
-    virtual void RenderFrame() = 0;
 };
 
-#endif //HACKFRAMEWORK_IRENDERBACKEND_H
+#endif // HACKFRAMEWORK_IRENDERBACKEND_H

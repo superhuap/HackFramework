@@ -1,0 +1,66 @@
+//
+// Created by superhuap on 2026/8/25.
+//
+
+#include "menu/Menu.h"
+
+#include <imgui.h>
+#include <imgui_impl_win32.h>
+
+#include "utils/InputHook.h"
+#include "utils/Logger.h"
+
+namespace menu
+{
+
+    Menu& Menu::GetInstance()
+    {
+        static Menu instance;
+        return instance;
+    }
+
+    bool Menu::Initialize(HWND hWnd)
+    {
+        if (ImGui::GetCurrentContext())
+            return true;
+
+        ImGui::CreateContext();
+
+        if (!ImGui_ImplWin32_Init(hWnd))
+        {
+            LOG_ERROR("Failed to initialize ImGui Win32 backend");
+            return false;
+        }
+
+        ImGuiIO& io = ImGui::GetIO();
+        io.IniFilename = nullptr;
+        io.LogFilename = nullptr;
+
+        // const ImWchar* glyph_ranges = io.Fonts->GetGlyphRangesChineseFull();
+        // io.Fonts->AddFontFromFileTTF(R"(c:\Windows\Fonts\msyh.ttc)", 32.0f, nullptr, glyph_ranges);
+
+        LOG_INFO("ImGui context initialized");
+        return true;
+    }
+
+    void Menu::Render()
+    {
+        if (!Utils::Input::menu_visible.load())
+            return;
+
+        ImGui::ShowDemoWindow();
+    }
+
+    void Menu::Shutdown()
+    {
+        if (!ImGui::GetCurrentContext())
+            return;
+
+        if (ImGui::GetIO().BackendPlatformUserData)
+            ImGui_ImplWin32_Shutdown();
+
+        ImGui::DestroyContext();
+        LOG_INFO("ImGui context destroyed");
+    }
+
+} // namespace menu

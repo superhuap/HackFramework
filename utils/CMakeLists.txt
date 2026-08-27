@@ -10,7 +10,7 @@ add_library(Utils STATIC ${src})
 target_include_directories(Utils PUBLIC include)
 target_include_directories(Utils PRIVATE "${PROJECT_BINARY_DIR}/generated")
 
-target_link_libraries(Utils PRIVATE spdlog::spdlog)
+target_link_libraries(Utils PUBLIC spdlog::spdlog)
 
 set_target_properties(Utils PROPERTIES
         FOLDER "Libraries"

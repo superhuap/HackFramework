@@ -9,13 +9,21 @@
 
 namespace Logger {
 
+    namespace {
+        bool g_initialized = false;
+    }
+
     void Init() {
+        if (g_initialized) return;
+        g_initialized = true;
+
         // 分配控制台
         if (AllocConsole()) {
             SetConsoleOutputCP(CP_UTF8);
             FILE* fDummy;
             freopen_s(&fDummy, "CONOUT$", "w", stdout);
             freopen_s(&fDummy, "CONOUT$", "w", stderr);
+            freopen_s(&fDummy, "conin$", "r", stdin);
 
             HWND hConsole = GetConsoleWindow();
 #ifdef ENABLE_LOGGING
@@ -54,12 +62,16 @@ namespace Logger {
     }
 
     void Shutdown() {
+        if (!g_initialized) return;
+        g_initialized = false;
+
         spdlog::shutdown();
 
         // 关闭控制台
         FILE* fDummy;
         freopen_s(&fDummy, "NUL", "w", stdout);
         freopen_s(&fDummy, "NUL", "w", stderr);
+        freopen_s(&fDummy, "NUL", "r", stdin);
         FreeConsole();
     }
 

@@ -1,10 +1,11 @@
 set(DLLMAIN_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/../dllmain.cpp)
+set(FACTORY_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/BackendFactory.cpp)
 
 foreach(BACKEND ${ENABLED_BACKENDS})
     set(BACKEND_SOURCE src/${BACKEND}_Backend.cpp)
 
     if(BACKEND STREQUAL "DX9")
-        set(BACKEND_LIBS d3d9 d3dx9)
+        set(BACKEND_LIBS d3d9)
         set(BACKEND_DEFINE BACKEND_DX9)
     elseif(BACKEND STREQUAL "DX10")
         set(BACKEND_LIBS d3d10 dxgi)
@@ -25,6 +26,7 @@ foreach(BACKEND ${ENABLED_BACKENDS})
 
     add_library(${BACKEND} SHARED
             ${DLLMAIN_SOURCE}
+            ${FACTORY_SOURCE}
             ${BACKEND_SOURCE}
     )
 

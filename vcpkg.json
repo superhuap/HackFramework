@@ -11,10 +11,9 @@
       "dx9-binding",
       "dx10-binding",
       "dx11-binding",
-      "dx12-binding",
-      "freetype"
+      "dx12-binding"
     ],
-    "version>=" : "1.92.8#1"
+    "version>=" : "1.92.7"
   }, {
     "name" : "spdlog",
     "version>=" : "1.17.0#1"

@@ -29,12 +29,14 @@ namespace
     uint32_t g_queueFamily = static_cast<uint32_t>(-1);
     std::vector<VkQueueFamilyProperties> g_queueFamilies;
 
+    constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 8;
+
     VkPipelineCache g_pipelineCache = VK_NULL_HANDLE;
     VkDescriptorPool g_descriptorPool = VK_NULL_HANDLE;
     uint32_t g_minImageCount = 2;
     VkRenderPass g_renderPass = VK_NULL_HANDLE;
-    ImGui_ImplVulkanH_Frame g_frames[8] = {};
-    ImGui_ImplVulkanH_FrameSemaphores g_frameSemaphores[8] = {};
+    ImGui_ImplVulkanH_Frame g_frames[MAX_FRAMES_IN_FLIGHT] = {};
+    ImGui_ImplVulkanH_FrameSemaphores g_frameSemaphores[MAX_FRAMES_IN_FLIGHT] = {};
 
     HWND g_hwnd = nullptr;
     VkExtent2D g_imageExtent = {};
@@ -64,6 +66,8 @@ namespace
         if (gpuCount == 0)
         {
             LOG_ERROR("No physical device found");
+            vkDestroyInstance(g_instance, g_allocator);
+            g_instance = VK_NULL_HANDLE;
             return false;
         }
 
@@ -99,6 +103,8 @@ namespace
         if (g_queueFamily == static_cast<uint32_t>(-1))
         {
             LOG_ERROR("No graphics queue family found");
+            vkDestroyInstance(g_instance, g_allocator);
+            g_instance = VK_NULL_HANDLE;
             return false;
         }
         LOG_INFO("Vulkan: g_QueueFamily: {}", g_queueFamily);
@@ -122,6 +128,8 @@ namespace
         if (vkCreateDevice(g_physicalDevice, &deviceInfo, g_allocator, &g_fakeDevice) != VK_SUCCESS)
         {
             LOG_ERROR("vkCreateDevice() failed");
+            vkDestroyInstance(g_instance, g_allocator);
+            g_instance = VK_NULL_HANDLE;
             return false;
         }
         LOG_INFO("Vulkan: g_FakeDevice: {}", reinterpret_cast<void*>(g_fakeDevice));
@@ -133,8 +141,13 @@ namespace
     {
         uint32_t imageCount = 0;
         vkGetSwapchainImagesKHR(device, swapchain, &imageCount, nullptr);
+        if (imageCount > MAX_FRAMES_IN_FLIGHT)
+        {
+            LOG_WARN("Swapchain image count {} exceeds max {}; clamping", imageCount, MAX_FRAMES_IN_FLIGHT);
+            imageCount = MAX_FRAMES_IN_FLIGHT;
+        }
 
-        VkImage backbuffers[8] = {};
+        VkImage backbuffers[MAX_FRAMES_IN_FLIGHT] = {};
         vkGetSwapchainImagesKHR(device, swapchain, &imageCount, backbuffers);
 
         for (uint32_t i = 0; i < imageCount; ++i)
@@ -325,6 +338,9 @@ namespace
 
     void CleanupRenderTarget()
     {
+        if (g_device == VK_NULL_HANDLE)
+            return;
+
         for (uint32_t i = 0; i < RTL_NUMBER_OF(g_frames); ++i)
         {
             if (g_frames[i].Fence)
@@ -354,6 +370,12 @@ namespace
             }
         }
 
+        if (g_renderPass)
+        {
+            vkDestroyRenderPass(g_device, g_renderPass, g_allocator);
+            g_renderPass = VK_NULL_HANDLE;
+        }
+
         for (uint32_t i = 0; i < RTL_NUMBER_OF(g_frameSemaphores); ++i)
         {
             if (g_frameSemaphores[i].ImageAcquiredSemaphore)
@@ -371,12 +393,15 @@ namespace
 
     void CleanupDeviceVulkan()
     {
-        CleanupRenderTarget();
-
-        if (g_descriptorPool)
+        if (g_device != VK_NULL_HANDLE)
         {
-            vkDestroyDescriptorPool(g_device, g_descriptorPool, g_allocator);
-            g_descriptorPool = VK_NULL_HANDLE;
+            CleanupRenderTarget();
+
+            if (g_descriptorPool)
+            {
+                vkDestroyDescriptorPool(g_device, g_descriptorPool, g_allocator);
+                g_descriptorPool = VK_NULL_HANDLE;
+            }
         }
         if (g_instance)
         {

@@ -94,11 +94,11 @@ namespace
 
     void RenderImGui_D3D9(IDirect3DDevice9* pDevice)
     {
-        if (!ImGui::GetIO().BackendRendererUserData)
-            ImGui_ImplDX9_Init(pDevice);
-
         if (Utils::Input::shutting_down.load() || !ImGui::GetCurrentContext())
             return;
+
+        if (!ImGui::GetIO().BackendRendererUserData)
+            ImGui_ImplDX9_Init(pDevice);
 
         DWORD srgbWriteEnable = 0;
         pDevice->GetRenderState(D3DRS_SRGBWRITEENABLE, &srgbWriteEnable);

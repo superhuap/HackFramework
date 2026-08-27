@@ -101,6 +101,9 @@ namespace
 
     void RenderImGui_DX11(IDXGISwapChain* pSwapChain)
     {
+        if (Utils::Input::shutting_down.load())
+            return;
+
         if (!ImGui::GetIO().BackendRendererUserData)
         {
             if (SUCCEEDED(pSwapChain->GetDevice(IID_PPV_ARGS(&g_device))))
@@ -108,9 +111,6 @@ namespace
             if (g_device && g_deviceContext)
                 ImGui_ImplDX11_Init(g_device, g_deviceContext);
         }
-
-        if (Utils::Input::shutting_down.load())
-            return;
 
         if (!g_renderTarget)
             CreateRenderTarget(pSwapChain);
@@ -240,10 +240,6 @@ bool DX11_Backend::Initialize(HWND hWnd)
         return false;
     }
 
-    factory->Release();
-    dxgiAdapter->Release();
-    dxgiDevice->Release();
-
     void** vtable = *reinterpret_cast<void***>(g_swapChain);
     void** factoryVtable = *reinterpret_cast<void***>(factory);
 
@@ -256,6 +252,10 @@ bool DX11_Backend::Initialize(HWND hWnd)
     void* fnPresent1 = vtable[22];
     void* fnResizeBuffers = vtable[13];
     void* fnResizeBuffers1 = vtable[39];
+
+    factory->Release();
+    dxgiAdapter->Release();
+    dxgiDevice->Release();
 
     CleanupDeviceD3D11();
 

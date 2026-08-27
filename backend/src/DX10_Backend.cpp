@@ -89,14 +89,14 @@ namespace
 
     void RenderImGui_DX10(IDXGISwapChain* pSwapChain)
     {
+        if (Utils::Input::shutting_down.load())
+            return;
+
         if (!ImGui::GetIO().BackendRendererUserData)
         {
             if (SUCCEEDED(pSwapChain->GetDevice(IID_PPV_ARGS(&g_device))))
                 ImGui_ImplDX10_Init(g_device);
         }
-
-        if (Utils::Input::shutting_down.load())
-            return;
 
         if (!g_renderTarget)
             CreateRenderTarget(pSwapChain);
@@ -226,10 +226,6 @@ bool DX10_Backend::Initialize(HWND hWnd)
         return false;
     }
 
-    factory->Release();
-    dxgiAdapter->Release();
-    dxgiDevice->Release();
-
     void** vtable = *reinterpret_cast<void***>(g_swapChain);
     void** factoryVtable = *reinterpret_cast<void***>(factory);
 
@@ -242,6 +238,10 @@ bool DX10_Backend::Initialize(HWND hWnd)
     void* fnPresent1 = vtable[22];
     void* fnResizeBuffers = vtable[13];
     void* fnResizeBuffers1 = vtable[39];
+
+    factory->Release();
+    dxgiAdapter->Release();
+    dxgiDevice->Release();
 
     CleanupDeviceD3D10();
 

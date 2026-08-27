@@ -22,12 +22,15 @@ namespace
 
     VkAllocationCallbacks* g_allocator = nullptr;
     VkInstance g_instance = VK_NULL_HANDLE;
+    VkInstance g_fakeInstance = VK_NULL_HANDLE;
     VkPhysicalDevice g_physicalDevice = VK_NULL_HANDLE;
     VkDevice g_fakeDevice = VK_NULL_HANDLE;
     VkDevice g_device = VK_NULL_HANDLE;
 
     uint32_t g_queueFamily = static_cast<uint32_t>(-1);
     std::vector<VkQueueFamilyProperties> g_queueFamilies;
+
+    uint32_t g_imageCount = 0;
 
     constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 8;
 
@@ -46,6 +49,31 @@ namespace
     void RenderImGui_Vulkan(VkQueue queue, const VkPresentInfoKHR* pPresentInfo);
     bool DoesQueueSupportGraphic(VkQueue queue, VkQueue* pGraphicQueue);
 
+    void CapturePhysicalDevice(VkPhysicalDevice physicalDevice)
+    {
+        if (g_physicalDevice == physicalDevice)
+            return;
+
+        g_physicalDevice = physicalDevice;
+        LOG_INFO("Vulkan: captured real PhysicalDevice: {}", reinterpret_cast<void*>(physicalDevice));
+
+        uint32_t count = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, nullptr);
+        g_queueFamilies.resize(count);
+        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, g_queueFamilies.data());
+
+        g_queueFamily = static_cast<uint32_t>(-1);
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            if (g_queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            {
+                g_queueFamily = i;
+                break;
+            }
+        }
+        LOG_INFO("Vulkan: real graphics queue family: {}", g_queueFamily);
+    }
+
     bool CreateDeviceVK()
     {
         VkInstanceCreateInfo instanceInfo = {};
@@ -54,25 +82,25 @@ namespace
         instanceInfo.enabledExtensionCount = 1;
         instanceInfo.ppEnabledExtensionNames = &instanceExtension;
 
-        if (vkCreateInstance(&instanceInfo, g_allocator, &g_instance) != VK_SUCCESS)
+        if (vkCreateInstance(&instanceInfo, g_allocator, &g_fakeInstance) != VK_SUCCESS)
         {
             LOG_ERROR("vkCreateInstance() failed");
             return false;
         }
-        LOG_INFO("Vulkan: g_Instance: {}", reinterpret_cast<void*>(g_instance));
+        LOG_INFO("Vulkan: g_FakeInstance: {}", reinterpret_cast<void*>(g_fakeInstance));
 
         uint32_t gpuCount = 0;
-        vkEnumeratePhysicalDevices(g_instance, &gpuCount, nullptr);
+        vkEnumeratePhysicalDevices(g_fakeInstance, &gpuCount, nullptr);
         if (gpuCount == 0)
         {
             LOG_ERROR("No physical device found");
-            vkDestroyInstance(g_instance, g_allocator);
-            g_instance = VK_NULL_HANDLE;
+            vkDestroyInstance(g_fakeInstance, g_allocator);
+            g_fakeInstance = VK_NULL_HANDLE;
             return false;
         }
 
         std::vector<VkPhysicalDevice> gpus(gpuCount);
-        vkEnumeratePhysicalDevices(g_instance, &gpuCount, gpus.data());
+        vkEnumeratePhysicalDevices(g_fakeInstance, &gpuCount, gpus.data());
 
         uint32_t useGpu = 0;
         for (uint32_t i = 0; i < gpuCount; ++i)
@@ -103,8 +131,8 @@ namespace
         if (g_queueFamily == static_cast<uint32_t>(-1))
         {
             LOG_ERROR("No graphics queue family found");
-            vkDestroyInstance(g_instance, g_allocator);
-            g_instance = VK_NULL_HANDLE;
+            vkDestroyInstance(g_fakeInstance, g_allocator);
+            g_fakeInstance = VK_NULL_HANDLE;
             return false;
         }
         LOG_INFO("Vulkan: g_QueueFamily: {}", g_queueFamily);
@@ -128,8 +156,8 @@ namespace
         if (vkCreateDevice(g_physicalDevice, &deviceInfo, g_allocator, &g_fakeDevice) != VK_SUCCESS)
         {
             LOG_ERROR("vkCreateDevice() failed");
-            vkDestroyInstance(g_instance, g_allocator);
-            g_instance = VK_NULL_HANDLE;
+            vkDestroyInstance(g_fakeInstance, g_allocator);
+            g_fakeInstance = VK_NULL_HANDLE;
             return false;
         }
         LOG_INFO("Vulkan: g_FakeDevice: {}", reinterpret_cast<void*>(g_fakeDevice));
@@ -146,6 +174,7 @@ namespace
             LOG_WARN("Swapchain image count {} exceeds max {}; clamping", imageCount, MAX_FRAMES_IN_FLIGHT);
             imageCount = MAX_FRAMES_IN_FLIGHT;
         }
+        g_imageCount = imageCount;
 
         VkImage backbuffers[MAX_FRAMES_IN_FLIGHT] = {};
         vkGetSwapchainImagesKHR(device, swapchain, &imageCount, backbuffers);
@@ -304,6 +333,33 @@ namespace
         return false;
     }
 
+    VkResult(VKAPI_CALL* oCreateInstance)(const VkInstanceCreateInfo*, const VkAllocationCallbacks*, VkInstance*) = nullptr;
+    VkResult VKAPI_CALL Hook_CreateInstance(const VkInstanceCreateInfo* pCreateInfo,
+                                            const VkAllocationCallbacks* pAllocator, VkInstance* pInstance)
+    {
+        const VkResult result = oCreateInstance(pCreateInfo, pAllocator, pInstance);
+        if (result == VK_SUCCESS && pInstance && *pInstance != VK_NULL_HANDLE)
+        {
+            g_instance = *pInstance;
+            LOG_INFO("Vulkan: captured real Instance: {}", reinterpret_cast<void*>(g_instance));
+        }
+        return result;
+    }
+
+    VkResult(VKAPI_CALL* oCreateDevice)(VkPhysicalDevice, const VkDeviceCreateInfo*, const VkAllocationCallbacks*, VkDevice*) = nullptr;
+    VkResult VKAPI_CALL Hook_CreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo,
+                                          const VkAllocationCallbacks* pAllocator, VkDevice* pDevice)
+    {
+        const VkResult result = oCreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
+        if (result == VK_SUCCESS && pDevice && *pDevice != VK_NULL_HANDLE)
+        {
+            CapturePhysicalDevice(physicalDevice);
+            g_device = *pDevice;
+            LOG_INFO("Vulkan: captured real Device: {}", reinterpret_cast<void*>(g_device));
+        }
+        return result;
+    }
+
     VkResult(VKAPI_CALL* oAcquireNextImageKHR)(VkDevice, VkSwapchainKHR, uint64_t, VkSemaphore, VkFence, uint32_t*) = nullptr;
     VkResult VKAPI_CALL Hook_AcquireNextImageKHR(VkDevice device, VkSwapchainKHR swapchain, uint64_t timeout,
                                                   VkSemaphore semaphore, VkFence fence, uint32_t* pImageIndex)
@@ -403,12 +459,17 @@ namespace
                 g_descriptorPool = VK_NULL_HANDLE;
             }
         }
-        if (g_instance)
+        if (g_fakeInstance)
         {
-            vkDestroyInstance(g_instance, g_allocator);
-            g_instance = VK_NULL_HANDLE;
+            vkDestroyInstance(g_fakeInstance, g_allocator);
+            g_fakeInstance = VK_NULL_HANDLE;
         }
 
+        g_instance = VK_NULL_HANDLE;
+        g_physicalDevice = VK_NULL_HANDLE;
+        g_queueFamilies.clear();
+        g_queueFamily = static_cast<uint32_t>(-1);
+        g_imageCount = 0;
         g_imageExtent = {};
         g_device = VK_NULL_HANDLE;
     }
@@ -469,8 +530,8 @@ namespace
                 init_info.Queue = graphicQueue;
                 init_info.PipelineCache = g_pipelineCache;
                 init_info.DescriptorPool = g_descriptorPool;
-                init_info.MinImageCount = g_minImageCount;
-                init_info.ImageCount = g_minImageCount;
+                init_info.MinImageCount = g_imageCount ? g_imageCount : g_minImageCount;
+                init_info.ImageCount = g_imageCount ? g_imageCount : g_minImageCount;
                 init_info.Allocator = g_allocator;
 
                 init_info.PipelineInfoMain.RenderPass = g_renderPass;
@@ -555,6 +616,13 @@ bool VULKAN_Backend::Initialize(HWND hWnd)
         return reinterpret_cast<void*>(vkGetDeviceProcAddr(g_fakeDevice, name));
     };
 
+    // Instance-level commands are resolved from the (fake) instance, not the device.
+    auto getInstanceProc = [&](const char* name) -> void* {
+        return reinterpret_cast<void*>(vkGetInstanceProcAddr(g_fakeInstance, name));
+    };
+
+    void* fnCreateInstance = getInstanceProc("vkCreateInstance");
+    void* fnCreateDevice = getInstanceProc("vkCreateDevice");
     void* fnAcquireNextImageKHR = getProc("vkAcquireNextImageKHR");
     void* fnAcquireNextImage2KHR = getProc("vkAcquireNextImage2KHR");
     void* fnQueuePresentKHR = getProc("vkQueuePresentKHR");
@@ -566,16 +634,25 @@ bool VULKAN_Backend::Initialize(HWND hWnd)
         g_fakeDevice = VK_NULL_HANDLE;
     }
 
+    bool ok = true;
+    ok &= backend::CreateHookOnce(fnCreateInstance, &Hook_CreateInstance,
+                                  reinterpret_cast<void**>(&oCreateInstance), "vkCreateInstance") != nullptr;
+    ok &= backend::CreateHookOnce(fnCreateDevice, &Hook_CreateDevice,
+                                  reinterpret_cast<void**>(&oCreateDevice), "vkCreateDevice") != nullptr;
+    backend::EnableHook(fnCreateInstance, "vkCreateInstance");
+    backend::EnableHook(fnCreateDevice, "vkCreateDevice");
+
     if (fnAcquireNextImageKHR)
     {
         g_hwnd = hWnd;
 
+        LOG_INFO("Vulkan: fnCreateInstance: {}", reinterpret_cast<void*>(fnCreateInstance));
+        LOG_INFO("Vulkan: fnCreateDevice: {}", reinterpret_cast<void*>(fnCreateDevice));
         LOG_INFO("Vulkan: fnAcquireNextImageKHR: {}", reinterpret_cast<void*>(fnAcquireNextImageKHR));
         LOG_INFO("Vulkan: fnAcquireNextImage2KHR: {}", reinterpret_cast<void*>(fnAcquireNextImage2KHR));
         LOG_INFO("Vulkan: fnQueuePresentKHR: {}", reinterpret_cast<void*>(fnQueuePresentKHR));
         LOG_INFO("Vulkan: fnCreateSwapchainKHR: {}", reinterpret_cast<void*>(fnCreateSwapchainKHR));
 
-        bool ok = true;
         ok &= backend::CreateHookOnce(fnAcquireNextImageKHR, &Hook_AcquireNextImageKHR,
                                       reinterpret_cast<void**>(&oAcquireNextImageKHR), "vkAcquireNextImageKHR") != nullptr;
         ok &= backend::CreateHookOnce(fnAcquireNextImage2KHR, &Hook_AcquireNextImage2KHR,

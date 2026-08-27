@@ -13,19 +13,35 @@
 #include "utils/InputHook.h"
 #include "utils/Logger.h"
 
-OPENGL_Backend* OPENGL_Backend::s_instance = nullptr;
-
 namespace
 {
 
     BOOL(WINAPI * oWglSwapBuffers)(HDC) = nullptr;
 
+    BOOL WINAPI Hook_wglSwapBuffers(HDC hdc)
+    {
+        if (!Utils::Input::shutting_down.load() && ImGui::GetCurrentContext())
+        {
+            if (!ImGui::GetIO().BackendRendererUserData)
+                ImGui_ImplOpenGL3_Init();
+
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplWin32_NewFrame();
+            ImGui::NewFrame();
+
+            Menu::Render();
+
+            ImGui::Render();
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        }
+
+        return oWglSwapBuffers(hdc);
+    }
+
 } // namespace
 
 bool OPENGL_Backend::Initialize(HWND hWnd)
 {
-    s_instance = this;
-
     if (!Menu::Initialize(hWnd))
         return false;
 
@@ -67,26 +83,5 @@ void OPENGL_Backend::Shutdown()
 
     Menu::Shutdown();
 
-    s_instance = nullptr;
     LOG_INFO("OpenGL Backend shutdown complete");
-}
-
-BOOL WINAPI OPENGL_Backend::Hook_wglSwapBuffers(HDC hdc)
-{
-    if (!Utils::Input::shutting_down.load() && s_instance && ImGui::GetCurrentContext())
-    {
-        if (!ImGui::GetIO().BackendRendererUserData)
-            ImGui_ImplOpenGL3_Init();
-
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplWin32_NewFrame();
-        ImGui::NewFrame();
-
-        Menu::Render();
-
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    }
-
-    return oWglSwapBuffers(hdc);
 }

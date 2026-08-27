@@ -15,11 +15,6 @@ public:
 
     bool Initialize(HWND hWnd) override;
     void Shutdown() override;
-
-private:
-    static BOOL WINAPI Hook_wglSwapBuffers(HDC hdc);
-
-    static OPENGL_Backend* s_instance;
 };
 
 #endif // HACKFRAMEWORK_OPENGL_BACKEND_H

@@ -10,7 +10,6 @@ add_library(Features STATIC ${src})
 target_include_directories(Features PUBLIC include)
 
 target_link_libraries(Features PRIVATE
-        Menu
         Utils
         imgui::imgui
 )

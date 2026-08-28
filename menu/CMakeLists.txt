@@ -11,6 +11,7 @@ target_include_directories(Menu PUBLIC include)
 
 target_link_libraries(Menu PUBLIC
         imgui::imgui
+        Features
 )
 
 target_link_libraries(Menu PRIVATE

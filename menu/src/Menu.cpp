@@ -10,6 +10,8 @@
 #include "utils/InputHook.h"
 #include "utils/Logger.h"
 
+#include "feature/FeatureManager.h"
+
 namespace Menu
 {
 
@@ -33,6 +35,8 @@ namespace Menu
         // const ImWchar* glyph_ranges = io.Fonts->GetGlyphRangesChineseFull();
         // io.Fonts->AddFontFromFileTTF(R"(c:\Windows\Fonts\msyh.ttc)", 32.0f, nullptr, glyph_ranges);
 
+        Feature::Manager::Get().Start();
+
         LOG_INFO("ImGui context initialized");
         return true;
     }
@@ -42,11 +46,19 @@ namespace Menu
         if (!Utils::Input::menu_visible.load())
             return;
 
-        ImGui::ShowDemoWindow();
+        if (ImGui::Begin("HackFramework", nullptr,  ImGuiWindowFlags_NoSavedSettings))
+        {
+            Feature::Manager::Get().DrawMenu();
+        }
+        ImGui::End();
+
+        Feature::Manager::Get().TickDraw();
     }
 
     void Shutdown()
     {
+        Feature::Manager::Get().Stop();
+
         if (!ImGui::GetCurrentContext())
             return;
 
@@ -54,6 +66,7 @@ namespace Menu
             ImGui_ImplWin32_Shutdown();
 
         ImGui::DestroyContext();
+
         LOG_INFO("ImGui context destroyed");
     }
 

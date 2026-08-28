@@ -10,7 +10,7 @@
 #include "utils/InputHook.h"
 #include "utils/Logger.h"
 
-#include "feature/FeatureManager.h"
+#include "features/FeatureManager.h"
 #include "Features.h"
 
 namespace Menu

@@ -13,7 +13,6 @@
 #include <imgui_impl_win32.h>
 
 #include "menu/Menu.h"
-#include "utils/DxgiFormat.h"
 #include "utils/InputHook.h"
 #include "utils/Logger.h"
 
@@ -79,7 +78,9 @@ namespace
             pSwapChain->GetDesc(&sd);
 
             D3D10_RENDER_TARGET_VIEW_DESC desc = {};
-            desc.Format = static_cast<DXGI_FORMAT>(Utils::GetCorrectDXGIFormat(sd.BufferDesc.Format));
+            desc.Format = sd.BufferDesc.Format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
+                                      ? DXGI_FORMAT_R8G8B8A8_UNORM
+                                      : sd.BufferDesc.Format;
             desc.ViewDimension = D3D10_RTV_DIMENSION_TEXTURE2D;
 
             g_device->CreateRenderTargetView(pBackBuffer, &desc, &g_renderTarget);

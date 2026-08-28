@@ -5,7 +5,7 @@
 #ifndef HACKFRAMEWORK_BUFFEREDFEATURE_H
 #define HACKFRAMEWORK_BUFFEREDFEATURE_H
 
-#include "feature/IFeature.h"
+#include "features/IFeature.h"
 
 #include "utils/LockFreeBuffer.h"
 

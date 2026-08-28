@@ -4,7 +4,7 @@
 
 #include "Features.h"
 
-#include "feature/FeatureManager.h"
+#include "features/FeatureManager.h"
 
 namespace Feature
 {

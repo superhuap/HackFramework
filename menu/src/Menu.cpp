@@ -11,6 +11,7 @@
 #include "utils/Logger.h"
 
 #include "feature/FeatureManager.h"
+#include "Features.h"
 
 namespace Menu
 {
@@ -35,6 +36,7 @@ namespace Menu
         // const ImWchar* glyph_ranges = io.Fonts->GetGlyphRangesChineseFull();
         // io.Fonts->AddFontFromFileTTF(R"(c:\Windows\Fonts\msyh.ttc)", 32.0f, nullptr, glyph_ranges);
 
+        Feature::RegisterAll();
         Feature::Manager::Get().Start();
 
         LOG_INFO("ImGui context initialized");

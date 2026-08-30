@@ -44,7 +44,12 @@ namespace Feature
         if (m_running.exchange(true))
             return;
 
-        m_updateThread = std::thread(&Manager::TickUpdateLoop, this);
+        for (IFeature* feature : m_features)
+        {
+            if (feature)
+                m_threads[feature].thread = std::thread(&Manager::TickUpdateLoop, this, feature);
+        }
+
         LOG_INFO("Feature manager started ({} feature(s))", m_features.size());
     }
 
@@ -56,8 +61,15 @@ namespace Feature
                 return;
         }
 
-        if (m_updateThread.joinable())
-            m_updateThread.join();
+        for (auto& [feature, ft] : m_threads)
+            NotifyFeature(feature);
+
+        for (auto& [feature, ft] : m_threads)
+        {
+            if (ft.thread.joinable())
+                ft.thread.join();
+        }
+        m_threads.clear();
 
         std::lock_guard<std::mutex> lock(m_mutex);
         for (IFeature* feature : m_features)
@@ -72,16 +84,29 @@ namespace Feature
         LOG_INFO("Feature manager stopped");
     }
 
-    void Manager::TickUpdateLoop()
+    void Manager::TickUpdateLoop(IFeature* feature)
     {
-        while (m_running.load())
+        auto& ft = m_threads[feature];
+        while (is_running())
         {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            for (IFeature* feature : m_features)
             {
-                if (feature && feature->GetEnabled())
-                    feature->OnUpdate();
+                std::unique_lock<std::mutex> lock(ft.mtx);
+                ft.cv.wait(lock, [&] {
+                    return !is_running() || feature->GetEnabled();
+                });
             }
+
+            if (!is_running())
+                break;
+
+            feature->OnUpdate();
+
+            float intervalMs = feature->GetUpdateIntervalMs();
+            if (intervalMs <= 0.f)
+                intervalMs = kDefaultUpdateIntervalMs;
+
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(static_cast<int>(intervalMs)));
         }
     }
 
@@ -110,7 +135,11 @@ namespace Feature
                 continue;
 
             bool& enabled = feature->GetEnabled();
+            bool was_enabled = enabled;
             ImGui::Checkbox(feature->GetName(), &enabled);
+
+            if (!was_enabled && enabled)
+                NotifyFeature(feature);
 
             if (enabled)
             {
@@ -118,6 +147,21 @@ namespace Feature
                 feature->DrawOptions();
                 ImGui::Unindent();
             }
+        }
+    }
+
+    bool Manager::is_running() const
+    {
+        return m_running.load();
+    }
+
+    void Manager::NotifyFeature(IFeature* feature)
+    {
+        auto it = m_threads.find(feature);
+        if (it != m_threads.end())
+        {
+            std::lock_guard<std::mutex> lock(it->second.mtx);
+            it->second.cv.notify_one();
         }
     }
 

@@ -215,8 +215,10 @@ namespace Feature
 
 ### 双线程模型
 
+每个 feature 拥有独立后台线程，互不阻塞：
+
 ```
-后台线程（满速循环）          渲染线程（每帧一次）
+FeatureA 线程（独享）        渲染线程（每帧一次）
     │                              │
     ├─ OnUpdate()                  ├─ OnDraw()
     │   ├─ 读游戏内存              │   ├─ Read() 获取最新快照
@@ -225,10 +227,15 @@ namespace Feature
     │        │                     │
     │        └─ LockFreeBuffer ────┘
     │           无锁双缓冲          │
+    ├─ sleep(intervalMs)           │
+    └─ 循环...                     │
 ```
 
-- `OnUpdate()` 和 `OnDraw()` 通过 `LockFreeBuffer` 解耦
-- 读端零等待、零拷贝，适合"后台读取、渲染绘制"的分离场景
+- 每个 feature 拥有独立后台线程，互不阻塞
+- 禁用时线程通过 `condition_variable` 阻塞挂起，零 CPU 开销
+- 启用时由 `cv.notify_one()` 唤醒，立即恢复执行
+- 每次 `OnUpdate()` 执行完后 sleep `GetUpdateIntervalMs()` 毫秒（默认 ~3.33ms，即 300次/秒）
+- 开发者可覆写 `GetUpdateIntervalMs()` 自定义更新频率
 
 ### 生命周期
 
@@ -241,7 +248,7 @@ DllMain(DLL_PROCESS_ATTACH)
             ├─ CreateBackend()     根据编译宏创建 DX11/Vulkan 等后端
             ├─ FindProcessWindow() 查找目标窗口
             ├─ backend->Initialize()
-            │    ├─ Menu::Initialize()       创建 ImGui 上下文 + 注册所有 Feature + 启动后台线程
+            │    ├─ Menu::Initialize()       创建 ImGui 上下文 + 注册所有 Feature + 为每个 feature 启动独立后台线程
             │    └─ 挂钩 Present/ResizeBuffers 等图形 API
             └─ Input::Install()    安装 WndProc 钩子
 
@@ -267,7 +274,8 @@ DllMain(DLL_PROCESS_DETACH)
 | `GetEnabled()` | 任意 | 勾选状态判断 | 返回对 `m_enabled` 的引用 |
 | `Initialize()` | 主线程 | Manager::Start | 一次性初始化 |
 | `Shutdown()` | 主线程 | Manager::Stop | 释放资源 |
-| `OnUpdate()` | 后台线程 | 每 tick（启用时） | 读数据 + 计算 + Publish 快照 |
+| `OnUpdate()` | feature 独享后台线程 | 启用时按 interval 节拍执行 | 读数据 + 计算 + Publish 快照 |
+| `GetUpdateIntervalMs()` | — | — | 返回 sleep 毫秒数，默认 0（框架默认 ~3.33ms） |
 | `OnDraw()` | 渲染线程 | 每帧（启用时） | Read 快照 + ImGui 绘制 |
 | `DrawOptions()` | 渲染线程 | 菜单显示且启用 | 配置面板（颜色、大小等） |
 
@@ -299,5 +307,5 @@ LOG_WARN("窗口未找到，等待中...");
 1. **每个后端一个 DLL**：DX11 游戏用 `HackFramework_DX11.dll`，Vulkan 游戏用 `HackFramework_VULKAN.dll`，不能混用。
 2. **静态 CRT**：三元组为 `x64-windows-static`，所有依赖和 CRT 静态链接，无运行时依赖。
 3. **只改 `impl/` 目录**：添加新功能时只在 `features/` 的 `impl/` 下操作，不要修改 `core/` 下的框架代码。
-4. **OnUpdate 不要阻塞**：后台线程满速循环，`OnUpdate()` 中避免长时间阻塞操作，否则会拖慢所有功能的更新。
+4. **OnUpdate 不要阻塞**：每个 feature 有独立线程，`OnUpdate()` 阻塞只影响自身。但阻塞期间该 feature 不会更新，建议控制在合理时间内。
 5. **OnDraw 不要做重活**：渲染线程里只做 ImGui 绘制，不要读游戏内存或做计算。

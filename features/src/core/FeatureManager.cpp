@@ -46,7 +46,7 @@ namespace Feature
 
         for (IFeature* feature : m_features)
         {
-            if (feature)
+            if (feature && feature->HasUpdateThread())
                 m_threads[feature].thread = std::thread(&Manager::TickUpdateLoop, this, feature);
         }
 

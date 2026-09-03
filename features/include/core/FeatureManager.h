@@ -66,7 +66,7 @@ namespace Feature
             std::condition_variable cv;
         };
 
-        static constexpr float kDefaultUpdateIntervalMs = 1000.f / 300.f;  // ~3.33ms, 300次/秒
+        static constexpr float kDefaultUpdateIntervalMs = 1000.f / 150.f;  // ~6.67ms, 150次/秒
 
         std::mutex m_mutex;
         std::vector<IFeature*> m_features;

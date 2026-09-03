@@ -16,7 +16,7 @@ namespace Feature
     //   - OnDraw   在【渲染线程】执行，只负责 Read() 最新快照并用 ImGui 绘制，不做重活。
     //
     // checkbox 打勾后该功能的后台线程被唤醒执行；不勾选则通过 condition_variable 阻塞挂起。
-    // 每次 OnUpdate 执行完后线程 sleep GetUpdateIntervalMs() 毫秒，默认约 3.33ms（300次/秒）。
+    // 每次 OnUpdate 执行完后线程 sleep GetUpdateIntervalMs() 毫秒，默认约 6.67ms（150次/秒）。
     class IFeature
     {
     public:
@@ -44,9 +44,14 @@ namespace Feature
         virtual void DrawOptions() = 0;
 
         // 后台线程：每次 OnUpdate 执行完后 sleep 的毫秒数
-        // 默认 0 表示使用框架默认值（约 3.33ms，即 300次/秒）
+        // 默认 0 表示使用框架默认值（约 6.67ms，即 150次/秒）
         // 返回 > 0 时使用自定义间隔
         virtual float GetUpdateIntervalMs() const { return 0.f; }
+
+        // 是否启用后台线程调用 OnUpdate
+        // 返回 true 时该 feature 拥有独享后台线程，互不阻塞
+        // 默认 false（纯渲染，不创建线程）
+        virtual bool HasUpdateThread() const { return false; }
     };
 
 } // namespace Feature

@@ -5,7 +5,7 @@
 #ifndef HACKFRAMEWORK_FEATUREMANAGER_H
 #define HACKFRAMEWORK_FEATUREMANAGER_H
 
-#include "core/IFeature.h"
+#include "features/core/IFeature.h"
 
 #include <atomic>
 #include <condition_variable>

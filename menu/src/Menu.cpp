@@ -10,8 +10,8 @@
 #include "utils/InputHook.h"
 #include "utils/Logger.h"
 
-#include "core/FeatureManager.h"
-#include "impl/Features.h"
+#include "features/core/FeatureManager.h"
+#include "features/impl/Features.h"
 
 namespace Menu
 {

@@ -2,9 +2,9 @@
 // Created by superhuap on 2026/8/25.
 //
 
-#include "impl/Features.h"
+#include "features/impl/Features.h"
 
-#include "core/FeatureManager.h"
+#include "features/core/FeatureManager.h"
 
 namespace Feature
 {

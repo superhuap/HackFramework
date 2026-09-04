@@ -2,7 +2,7 @@
 // Created by superhuap on 2026/8/25.
 //
 
-#include "core/FeatureManager.h"
+#include "features/core/FeatureManager.h"
 
 #include <imgui.h>
 

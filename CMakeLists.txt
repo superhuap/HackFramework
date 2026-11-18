@@ -24,12 +24,13 @@ find_package(spdlog CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(minhook CONFIG REQUIRED)
 find_package(OpenGL REQUIRED)
+find_package(Vulkan REQUIRED)
+
 if(BUILD_ARCH STREQUAL "x64")
-    find_package(Vulkan REQUIRED)
     # One backend per DLL: HackFramework_<BACKEND>.dll each.
     set(ENABLED_BACKENDS DX9 DX10 DX11 DX12 OPENGL VULKAN)
 elseif(BUILD_ARCH STREQUAL "x86")
-    set(ENABLED_BACKENDS DX9 DX10 DX11 DX12 OPENGL)
+    set(ENABLED_BACKENDS DX9 DX10 DX11 OPENGL VULKAN)
 endif()
 
 add_subdirectory(utils)

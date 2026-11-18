@@ -6,6 +6,7 @@
 #ifndef HACKFRAMEWORK_WINUTIL_H
 #define HACKFRAMEWORK_WINUTIL_H
 
+#include <cstdint>
 #include <windows.h>
 
 namespace Core
@@ -37,6 +38,12 @@ namespace Core
 
     // Hidden 64x64 window for dummy swap chains ("STATIC" is a system class).
     HWND CreateHiddenWindow();
+
+    // The window of this process that presents, for APIs that do not carry it
+    // (a Vulkan surface in use before the hook, say): the visible top-level
+    // window whose client area is `width` x `height` when both are non-zero,
+    // else the one of the foreground process, else the largest.
+    HWND FindProcessWindow(uint32_t width = 0, uint32_t height = 0);
 
 } // namespace Core
 

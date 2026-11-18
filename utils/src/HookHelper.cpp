@@ -22,15 +22,21 @@ namespace HookHelper{
     }
 
     bool UninstallHook(const char* name, void* target) {
-        MH_STATUS status = MH_DisableHook(target);
-        if (status == MH_OK)
-            status = MH_RemoveHook(target);
-        if (status != MH_OK) {
-            Logger::Error("Unhooking {} at {:p} failed: {}", name, target, MH_StatusToString(status));
+        // The backends disable every hook before draining the detours and
+        // uninstalling; a hook that is already disabled is fine, it must
+        // still be removed.
+        const MH_STATUS disable = MH_DisableHook(target);
+        if (disable == MH_OK || disable == MH_ERROR_DISABLED) {
+            const MH_STATUS remove = MH_RemoveHook(target);
+            if (remove == MH_OK) {
+                Logger::Debug("Unhooked {} at {:p}", name, target);
+                return true;
+            }
+            Logger::Error("Unhooking {} at {:p} failed: {}", name, target, MH_StatusToString(remove));
             return false;
         }
-        Logger::Debug("Unhooked {} at {:p}", name, target);
-        return true;
+        Logger::Error("Unhooking {} at {:p} failed: {}", name, target, MH_StatusToString(disable));
+        return false;
     }
 
     bool DisableHook(const char* name, void* target) {

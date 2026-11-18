@@ -636,6 +636,8 @@ namespace
         // A window created before the hook is not known: without it the menu
         // cannot bind, so nothing is drawn.
         if (!swapchainInfo.window)
+            swapchainInfo.window = Core::FindProcessWindow();
+        if (!swapchainInfo.window)
         {
             static std::atomic<bool> g_logged{false};
             if (!g_logged.exchange(true))
@@ -799,12 +801,18 @@ namespace
     void OnSwapchainCreated(VkDevice device, const VkSwapchainCreateInfoKHR& info, VkSwapchainKHR swapchain)
     {
         HWND window = nullptr;
+        bool known = false;
         {
             std::lock_guard<std::mutex> lock(g_mutex);
             auto surface = g_surfaces.find(info.surface);
-            if (surface != g_surfaces.end())
+            known = surface != g_surfaces.end();
+            if (known)
                 window = surface->second;
         }
+        // The surface was created before the hook: its window is the one of
+        // the swap chain's size.
+        if (!known)
+            window = Core::FindProcessWindow(info.imageExtent.width, info.imageExtent.height);
         std::lock_guard<std::mutex> lock(g_mutex);
         g_swapchains[swapchain] = {device, info.imageFormat, info.imageExtent, window};
         g_setupFailures = 0;

@@ -1,4 +1,5 @@
 set(DLLMAIN_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/dllmain.cpp)
+set(LIFECYCLE_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/Lifecycle.cpp)
 set(FACTORY_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/BackendFactory.cpp)
 
 foreach(BACKEND ${ENABLED_BACKENDS})
@@ -11,7 +12,7 @@ foreach(BACKEND ${ENABLED_BACKENDS})
         set(BACKEND_LIBS d3d10 dxgi)
         set(BACKEND_DEFINE BACKEND_DX10)
     elseif(BACKEND STREQUAL "DX11")
-        set(BACKEND_LIBS d3d11 dxgi)
+        set(BACKEND_LIBS d3d11 dxgi d3dcompiler dwmapi)
         set(BACKEND_DEFINE BACKEND_DX11)
     elseif(BACKEND STREQUAL "DX12")
         set(BACKEND_LIBS d3d12 dxgi)
@@ -26,6 +27,7 @@ foreach(BACKEND ${ENABLED_BACKENDS})
 
     add_library(${BACKEND} SHARED
             ${DLLMAIN_SOURCE}
+            ${LIFECYCLE_SOURCE}
             ${FACTORY_SOURCE}
             ${BACKEND_SOURCE}
     )
@@ -37,7 +39,9 @@ foreach(BACKEND ${ENABLED_BACKENDS})
     target_link_libraries(${BACKEND} PRIVATE
             Menu
             Features
+            Core
             Utils
+            minhook::minhook
             ${BACKEND_LIBS}
     )
 

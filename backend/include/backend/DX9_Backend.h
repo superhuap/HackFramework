@@ -7,11 +7,11 @@
 
 #include "backend/IRenderBackend.h"
 
-class DX19_Backend : public IRenderBackend
+class DX9_Backend : public IRenderBackend
 {
 public:
-    bool Initialize(HWND hWnd) override;
+    bool Initialize() override;
     void Shutdown() override;
 };
 
-#endif //HACKFRAMEWORK_DX9_BACKEND_H
+#endif // HACKFRAMEWORK_DX9_BACKEND_H

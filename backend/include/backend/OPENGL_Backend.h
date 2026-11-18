@@ -7,10 +7,11 @@
 
 #include "backend/IRenderBackend.h"
 
-class OPENGL_Backend : public IRenderBackend{
+class OPENGL_Backend : public IRenderBackend
+{
 public:
-    bool Initialize(HWND hWnd) override;
+    bool Initialize() override;
     void Shutdown() override;
 };
 
-#endif //HACKFRAMEWORK_OPENGL_BACKEND_H
+#endif // HACKFRAMEWORK_OPENGL_BACKEND_H

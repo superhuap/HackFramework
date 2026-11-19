@@ -10,8 +10,12 @@ else()
     set(VCPKG_TARGET_TRIPLET "${BUILD_ARCH}-mingw-static")
     # Dead code elimination and a small DLL: the static libs (libstdc++,
     # vcpkg) carry DWARF debug sections that bloat the image otherwise.
+    # --exclude-all-symbols: ld exports every global symbol of a DLL by default,
+    # and each export is a --gc-sections root that keeps unused template
+    # instances alive (.edata alone was 158 KB). Nothing links against these
+    # DLLs, so turn the automatic exports off.
     add_compile_options(-ffunction-sections -fdata-sections)
-    add_link_options(-static -static-libgcc -static-libstdc++ -Wl,--gc-sections)
+    add_link_options(-static -static-libgcc -static-libstdc++ -Wl,--gc-sections -Wl,--exclude-all-symbols)
     add_link_options($<$<CONFIG:Release>:-s>)
 endif()
 

@@ -53,5 +53,6 @@ foreach(BACKEND ${ENABLED_BACKENDS})
             OUTPUT_NAME "${PROJECT_NAME}_${BACKEND}"
             FOLDER "Backends"
             DEBUG_POSTFIX "_debug"
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
     )
 endforeach ()

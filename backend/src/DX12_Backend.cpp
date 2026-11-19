@@ -10,7 +10,6 @@
 #include <dxgi1_4.h>
 
 #include <atomic>
-#include <cstring>
 #include <mutex>
 #include <vector>
 
@@ -18,7 +17,6 @@
 #include <imgui_impl_dx12.h>
 #include <imgui_impl_win32.h>
 
-#include "backend/BackendFactory.h"
 #include "backend/DxgiUtil.h"
 #include "backend/ImGuiColors.h"
 #include "menu/Menu.h"

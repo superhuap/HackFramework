@@ -22,7 +22,6 @@
 #include <imgui_impl_vulkan.h>
 #include <imgui_impl_win32.h>
 
-#include "backend/BackendFactory.h"
 #include "backend/ImGuiColors.h"
 #include "menu/Menu.h"
 #include "utils/HookHelper.h"

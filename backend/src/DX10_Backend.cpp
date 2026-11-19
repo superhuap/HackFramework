@@ -16,7 +16,6 @@
 #include <imgui_impl_dx10.h>
 #include <imgui_impl_win32.h>
 
-#include "backend/BackendFactory.h"
 #include "backend/DxgiUtil.h"
 #include "backend/ImGuiColors.h"
 #include "menu/Menu.h"

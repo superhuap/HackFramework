@@ -15,7 +15,6 @@
 #include <imgui_impl_dx9.h>
 #include <imgui_impl_win32.h>
 
-#include "backend/BackendFactory.h"
 #include "menu/Menu.h"
 #include "utils/HookHelper.h"
 #include "utils/InputHook.h"

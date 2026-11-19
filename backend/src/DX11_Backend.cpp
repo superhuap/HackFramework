@@ -16,12 +16,12 @@
 #include <imgui_impl_dx11.h>
 #include <imgui_impl_win32.h>
 
-#include "backend/BackendFactory.h"
 #include "backend/DxgiUtil.h"
 #include "backend/ImGuiColors.h"
 #include "menu/Menu.h"
 #include "utils/HookHelper.h"
 #include "utils/InputHook.h"
+#include "utils/InputLock.h"
 #include "utils/Logger.h"
 
 #include "core/Guarded.h"

@@ -7,7 +7,6 @@
 
 #include "backend/OPENGL_Backend.h"
 
-#include <algorithm>
 #include <atomic>
 #include <mutex>
 #include <vector>
@@ -17,7 +16,6 @@
 #include <imgui_impl_opengl3_loader.h>
 #include <imgui_impl_win32.h>
 
-#include "backend/BackendFactory.h"
 #include "backend/GlState.h"
 #include "menu/Menu.h"
 #include "utils/HookHelper.h"

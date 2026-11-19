@@ -8,6 +8,8 @@
 
 #include "feature/core/IFeature.h"
 
+#include <utility>
+
 #include "utils/LockFreeBuffer.h"
 
 namespace Feature

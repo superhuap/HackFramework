@@ -10,6 +10,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <unordered_map>
@@ -40,8 +41,8 @@ namespace Feature
         Manager(const Manager&) = delete;
         Manager& operator=(const Manager&) = delete;
 
-        // 注册一个功能实例（拥有权转移给 Manager）。需在 Start() 之前调用。
-        void Register(IFeature* feature);
+        // 注册一个功能实例（所有权转移给 Manager）。需在 Start() 之前调用。
+        void Register(std::unique_ptr<IFeature> feature);
 
         void Start();
         void Stop();
@@ -69,7 +70,7 @@ namespace Feature
         static constexpr float kDefaultUpdateIntervalMs = 1000.f / 150.f; // ~6.67ms, 150次/秒
 
         std::mutex m_mutex;
-        std::vector<IFeature*> m_features;
+        std::vector<std::unique_ptr<IFeature>> m_features;
         std::unordered_map<IFeature*, FeatureThread> m_threads;
         std::atomic<bool> m_running{false};
     };

@@ -5,6 +5,8 @@
 
 #include "feature/impl/Features.h"
 
+#include <memory>
+
 #include "feature/core/FeatureManager.h"
 
 namespace Feature
@@ -12,9 +14,11 @@ namespace Feature
 
     void RegisterAll()
     {
-        // 开发者在此集中注册功能实例：
-        //   Manager::Get().Register(new MyFeature());
-        //   Manager::Get().Register(new XxxFeature());
+        auto& manager = Manager::Get();
+
+        // 开发者在此集中注册功能实例（所有权转移给 Manager）：
+        //   manager.Register(std::make_unique<MyFeature>());
+        //   manager.Register(std::make_unique<XxxFeature>());
     }
 
 } // namespace Feature

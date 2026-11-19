@@ -23,21 +23,22 @@ namespace Feature
         Stop();
     }
 
-    void Manager::Register(IFeature* feature)
+    void Manager::Register(std::unique_ptr<IFeature> feature)
     {
         if (!feature)
             return;
 
         std::lock_guard<std::mutex> lock(m_mutex);
-        m_features.push_back(feature);
+        m_features.push_back(std::move(feature));
     }
 
     void Manager::Start()
     {
         std::lock_guard<std::mutex> lock(m_mutex);
 
-        for (IFeature* feature : m_features)
+        for (const auto& owned : m_features)
         {
+            IFeature* feature = owned.get();
             if (feature && !feature->Initialize())
                 Logger::Error("[Feature] Initialize: '{}' failed", feature->GetName());
         }
@@ -45,8 +46,9 @@ namespace Feature
         if (m_running.exchange(true))
             return;
 
-        for (IFeature* feature : m_features)
+        for (const auto& owned : m_features)
         {
+            IFeature* feature = owned.get();
             if (feature && feature->HasUpdateThread())
                 m_threads[feature].thread = std::thread(&Manager::TickUpdateLoop, this, feature);
         }
@@ -73,13 +75,10 @@ namespace Feature
         m_threads.clear();
 
         std::lock_guard<std::mutex> lock(m_mutex);
-        for (IFeature* feature : m_features)
+        for (const auto& owned : m_features)
         {
-            if (feature)
-            {
-                feature->Shutdown();
-                delete feature;
-            }
+            if (owned)
+                owned->Shutdown();
         }
         m_features.clear();
         Logger::Debug("[Feature] Stop: done");
@@ -114,10 +113,10 @@ namespace Feature
     void Manager::TickDraw()
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        for (IFeature* feature : m_features)
+        for (const auto& owned : m_features)
         {
-            if (feature && feature->GetEnabled())
-                feature->OnDraw();
+            if (owned && owned->GetEnabled())
+                owned->OnDraw();
         }
     }
 
@@ -130,8 +129,9 @@ namespace Feature
             return;
         }
 
-        for (IFeature* feature : m_features)
+        for (const auto& owned : m_features)
         {
+            IFeature* feature = owned.get();
             if (!feature)
                 continue;
 

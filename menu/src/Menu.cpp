@@ -78,15 +78,16 @@ namespace Menu
 
     void Render()
     {
-        if (!InputHook::menu_visible.load())
-            return;
-
-        if (ImGui::Begin("HackFramework", nullptr, ImGuiWindowFlags_NoSavedSettings))
+        if (InputHook::menu_visible.load())
         {
-            Feature::Manager::Get().DrawMenu();
+            if (ImGui::Begin("HackFramework", nullptr, ImGuiWindowFlags_NoSavedSettings))
+            {
+                Feature::Manager::Get().DrawMenu();
+            }
+            ImGui::End();
         }
-        ImGui::End();
 
+        // 功能 overlay 每帧绘制，与菜单是否可见无关；仅受 feature 自身勾选状态控制。
         Feature::Manager::Get().TickDraw();
     }
 

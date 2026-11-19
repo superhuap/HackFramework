@@ -35,7 +35,10 @@ namespace Feature
         // 后台线程（每个 feature 独享）：读取 + 计算，Publish 快照（仅启用时被调用）
         virtual void OnUpdate() = 0;
 
-        // 渲染线程：Read() 获取最新快照并绘制（仅勾选时被调用）
+        // 渲染线程：Read() 获取最新快照并绘制（仅勾选时被调用）。
+        // 每帧都会调用，与菜单是否可见无关，所以这里只能画 draw list
+        // （GetBackgroundDrawList / GetForegroundDrawList），不能使用需要
+        // 当前窗口的控件（ImGui::Text / Button 等）。
         virtual void OnDraw() = 0;
 
         // checkbox 绑定：返回对勾选状态的引用

@@ -124,7 +124,8 @@ MinGW 会加 `lib` 前缀；MSVC 不加。
 
 - 日志：Debug 构建会弹出 "Debug Logger Console" 控制台；Release 构建关闭日志。
 - 带反作弊的联机游戏会检测注入，仅建议在自建测试程序或单机环境使用。
-- 菜单隐藏时 `Menu::Render()` 会提前返回，`OnDraw` 不会执行。如果功能需要在菜单关闭时继续绘制（如 ESP），需要调整这段逻辑。
+- `INSERT` 只控制配置菜单的显示。已勾选功能的 `OnDraw`（ESP、准星等）每帧都会绘制，与菜单是否可见无关。
+- `DrawOptions` 只在菜单可见时调用，用于放置 checkbox 之外的配置控件；`OnDraw` 没有当前窗口，只能使用 `ImGui::GetBackgroundDrawList()` / `GetForegroundDrawList()` 绘制。
 - Vulkan 后端目前把菜单命令提交到 Present 队列。若游戏的 Present 队列不支持 `VK_QUEUE_GRAPHICS_BIT`（少数引擎），菜单可能出现异常；参考项目 UniversalHookX 对此有 compute 队列回退，本框架尚未移植。
 
 ## 开发自己的功能
@@ -134,6 +135,8 @@ MinGW 会加 `lib` 前缀；MSVC 不加。
 继承 `Feature::IFeature`，或直接继承 `Feature::BufferedFeature<Snapshot>` 使用内置无锁双缓冲：
 
 ```cpp
+#include <fmt/format.h>
+
 #include "feature/core/BufferedFeature.h"
 
 #include <imgui.h>
@@ -172,9 +175,14 @@ public:
 
     void OnDraw() override
     {
-        // 渲染线程：只读取快照并绘制，不做重活
+        // 渲染线程：只读取快照并绘制，不做重活。
+        // 菜单隐藏时这里也会执行，且没有当前窗口，只能用 draw list。
         if (auto snapshot = Read())
-            ImGui::Text("value: %d", snapshot->value);
+        {
+            const std::string text = fmt::format("value: {}", snapshot->value);
+            ImGui::GetForegroundDrawList()->AddText(ImVec2(20.f, 20.f), IM_COL32(255, 255, 0, 255),
+                                                    text.c_str());
+        }
     }
 
     bool& GetEnabled() override { return m_enabled; }
@@ -202,7 +210,7 @@ void Feature::RegisterAll()
 }
 ```
 
-注册后，功能会自动出现在菜单里（checkbox + `DrawOptions` 面板），无需自己画菜单。
+注册后，功能会自动出现在菜单里（checkbox + `DrawOptions` 面板），无需自己画菜单。其中 `DrawOptions` 只在菜单可见时调用，用于放置配置控件；`OnDraw` 每帧调用（菜单隐藏也调用），用于 ESP 等画布绘制。
 
 ### 3. 安装 hook
 

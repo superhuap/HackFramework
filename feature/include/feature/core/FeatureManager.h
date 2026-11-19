@@ -26,7 +26,8 @@ namespace Feature
     //   - Stop()  在 Menu::Shutdown 时调用：停止所有后台线程(join)，对全部 feature 调 Shutdown 并释放。
     //
     // 每帧：
-    //   - TickDraw() 在 Menu::Render 时调用：仅对 GetEnabled() 为 true 的 feature 调 OnDraw。
+    //   - TickDraw() 在 Menu::Render 时调用：对 GetEnabled() 为 true 的 feature 调 OnDraw，
+    //     菜单隐藏时同样执行，所以 ESP 之类的绘制不受 INSERT 影响。
     //   - DrawMenu() 在菜单显示时调用：为每个 feature 生成 checkbox + 配置面板。
     //
     // 后台线程：

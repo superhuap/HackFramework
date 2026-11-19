@@ -16,8 +16,9 @@ namespace Menu
     // when the game recreates its swap chain on another window).
     bool Initialize(HWND hWnd);
 
-    // Draws the menu window and ticks the features. Called by the rendering
-    // backend between ImGui::NewFrame() and ImGui::Render(), under InputLock.
+    // Draws the menu window when it is visible and ticks the features every
+    // frame, whether the menu is open or not. Called by the rendering backend
+    // between ImGui::NewFrame() and ImGui::Render(), under InputLock.
     void Render();
 
     // Stops the features, detaches the platform backend and destroys the

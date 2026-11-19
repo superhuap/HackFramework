@@ -4,6 +4,11 @@
 
 #include "utils/Logger.h"
 
+#include <cstdio>
+
+#include <spdlog/async.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+
 #ifdef DEBUG_BUILD
 #define WIN32_LEAN_AND_MEAN
 #ifndef NOMINMAX

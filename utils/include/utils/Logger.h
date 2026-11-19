@@ -5,9 +5,9 @@
 #ifndef HACKFRAMEWORK_LOGGER_H
 #define HACKFRAMEWORK_LOGGER_H
 
+#include <utility>
+
 #include <spdlog/spdlog.h>
-#include <spdlog/async.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
 #include <fmt/format.h>
 
 namespace Logger {

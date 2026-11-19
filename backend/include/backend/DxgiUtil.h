@@ -7,7 +7,12 @@
 #ifndef HACKFRAMEWORK_DXGIUTIL_H
 #define HACKFRAMEWORK_DXGIUTIL_H
 
-#include <dxgiformat.h>
+#include <windows.h>
+#include <dxgi.h>
+
+#include <mutex>
+
+#include "core/WinUtil.h"
 
 namespace Dxgi
 {
@@ -17,6 +22,25 @@ namespace Dxgi
     constexpr size_t kResizeBuffersIndex = 13;
     constexpr size_t kPresent1Index = 22;
     constexpr size_t kResizeBuffers1Index = 39;
+
+    // The window of the swap chain. A swap chain created for composition has
+    // none: find the window of the process with the size of the back buffer.
+    inline HWND SwapChainWindow(IDXGISwapChain* swapChain, const DXGI_SWAP_CHAIN_DESC& desc)
+    {
+        if (desc.OutputWindow)
+            return desc.OutputWindow;
+
+        static std::mutex mutex;
+        static IDXGISwapChain* known = nullptr;
+        static HWND window = nullptr;
+        std::lock_guard<std::mutex> lock(mutex);
+        if (known != swapChain || !IsWindow(window))
+        {
+            known = swapChain;
+            window = Core::FindProcessWindow(desc.BufferDesc.Width, desc.BufferDesc.Height);
+        }
+        return window;
+    }
 
     // Format usable for a render target view on a swap chain buffer.
     inline DXGI_FORMAT RenderTargetFormat(DXGI_FORMAT format)

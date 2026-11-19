@@ -400,7 +400,8 @@ namespace
         if (g_device && (device != g_device || queue != g_queue || format != g_format || desc.BufferCount != g_bufferCount))
             Teardown();
 
-        if (!Menu::Initialize(desc.OutputWindow))
+        HWND window = Dxgi::SwapChainWindow(swapChain, desc);
+        if (!Menu::Initialize(window))
         {
             device->Release();
             return false;
@@ -412,7 +413,7 @@ namespace
             g_queue = queue;
             g_queue->AddRef();
             g_format = format;
-            g_boundWindow = desc.OutputWindow;
+            g_boundWindow = window;
 
             D3D12_DESCRIPTOR_HEAP_DESC heapDesc{};
             heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
@@ -473,6 +474,10 @@ namespace
 
     void Render(IDXGISwapChain* swapChain)
     {
+        // The swap chain may present while the hooks are still being installed.
+        if (!g_executeCommandLists)
+            return;
+
         bool known = false;
         ID3D12CommandQueue* queue = QueueFor(swapChain, known);
         if (!queue)

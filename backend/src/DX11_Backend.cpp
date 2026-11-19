@@ -92,7 +92,8 @@ namespace
         if (g_device && device != g_device)
             Teardown();
 
-        if (!Menu::Initialize(desc.OutputWindow))
+        HWND window = Dxgi::SwapChainWindow(swapChain, desc);
+        if (!Menu::Initialize(window))
         {
             Core::Release(device);
             return false;
@@ -109,9 +110,9 @@ namespace
             Core::Release(device);
         }
         g_swapChain = swapChain;
-        g_boundWindow = desc.OutputWindow;
+        g_boundWindow = window;
         Logger::Debug("[DX11] Init: bound to swap chain 0x{:X}, window {:p}",
-                      reinterpret_cast<unsigned long long>(swapChain), reinterpret_cast<void*>(desc.OutputWindow));
+                      reinterpret_cast<unsigned long long>(swapChain), reinterpret_cast<void*>(window));
         return true;
     }
 

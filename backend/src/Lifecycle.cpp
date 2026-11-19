@@ -23,6 +23,12 @@ namespace
     std::unique_ptr<IRenderBackend> g_backend;
     std::mutex g_lifecycleMutex;
 
+    // True when this module called MH_Initialize(). When another module in the
+    // process initialized MinHook first, MH_Initialize reports
+    // MH_ERROR_ALREADY_INITIALIZED and the library shares it: it never
+    // uninitializes it below another owner.
+    bool g_ownsMinHook = false;
+
 } // namespace
 
 namespace Lifecycle
@@ -41,7 +47,14 @@ namespace Lifecycle
         InputHook::Remove();
         g_backend->Shutdown();
         g_backend.reset();
-        MH_Uninitialize();
+        // The hooks are gone; when this module owned MinHook, release it before
+        // the library is freed. A MinHook the process already had stays with
+        // its owner.
+        if (g_ownsMinHook)
+        {
+            MH_Uninitialize();
+            g_ownsMinHook = false;
+        }
         Logger::Shutdown();
     }
 
@@ -50,10 +63,21 @@ namespace Lifecycle
         Logger::Init();
         Logger::Debug("[HF] Attach: backend {}", GetBackendName());
 
-        if (MH_Initialize() != MH_OK)
+        const MH_STATUS status = MH_Initialize();
+        if (status == MH_OK)
+        {
+            g_ownsMinHook = true;
+        }
+        else if (status != MH_ERROR_ALREADY_INITIALIZED)
         {
             Logger::Critical("[HF] Attach: MinHook initialization failed");
             return 0;
+        }
+        else
+        {
+            // Another module of the process owns MinHook: hooks are shared,
+            // and the library only removes the ones it installs.
+            Logger::Debug("[HF] Attach: reusing the MinHook instance of the process");
         }
 
         InputHook::SetHandlers(nullptr, &PrepareUnload);
@@ -63,7 +87,11 @@ namespace Lifecycle
         {
             Logger::Critical("[HF] Attach: backend initialization failed, unloading");
             g_backend.reset();
-            MH_Uninitialize();
+            if (g_ownsMinHook)
+            {
+                MH_Uninitialize();
+                g_ownsMinHook = false;
+            }
             Logger::Shutdown();
             // Give the async logger a moment before the DLL goes away.
             std::this_thread::sleep_for(std::chrono::milliseconds(200));

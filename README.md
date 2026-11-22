@@ -185,15 +185,12 @@ public:
         }
     }
 
-    bool& GetEnabled() override { return m_enabled; }
-
     void DrawOptions() override
     {
         ImGui::SliderInt("Option", &m_option, 0, 100);
     }
 
 private:
-    bool m_enabled = false;
     int m_option = 0;
 };
 ```

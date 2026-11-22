@@ -1,10 +1,4 @@
-set(DLLMAIN_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/dllmain.cpp)
-set(LIFECYCLE_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/Lifecycle.cpp)
-set(FACTORY_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/BackendFactory.cpp)
-
 foreach(BACKEND ${ENABLED_BACKENDS})
-    set(BACKEND_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/${BACKEND}_Backend.cpp)
-
     if(BACKEND STREQUAL "DX9")
         set(BACKEND_LIBS d3d9)
         set(BACKEND_DEFINE BACKEND_DX9)
@@ -26,10 +20,10 @@ foreach(BACKEND ${ENABLED_BACKENDS})
     endif()
 
     add_library(${BACKEND} SHARED
-            ${DLLMAIN_SOURCE}
-            ${LIFECYCLE_SOURCE}
-            ${FACTORY_SOURCE}
-            ${BACKEND_SOURCE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/dllmain.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/Lifecycle.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/BackendFactory.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/${BACKEND}_Backend.cpp
     )
 
     target_include_directories(${BACKEND} PRIVATE

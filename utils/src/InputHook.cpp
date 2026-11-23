@@ -38,6 +38,24 @@ namespace InputHook
             ~WndProcGuard() { --g_inWndProc; }
         };
 
+        // A named function rather than a lambda: on 32-bit targets the thread
+        // entry point must use the WINAPI (__stdcall) calling convention, which
+        // an ordinary lambda's operator() does not have.
+        DWORD WINAPI UnloadThread(LPVOID)
+        {
+            Remove();
+            const auto deadline =
+                std::chrono::steady_clock::now() + std::chrono::seconds(1);
+            while (g_inWndProc > 0 && std::chrono::steady_clock::now() < deadline)
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            if (g_inWndProc > 0)
+                Logger::Error("[Input] Unload: threads still inside the DLL");
+            if (g_unloadHandler)
+                g_unloadHandler();
+            FreeLibraryAndExitThread(DllHelper::GetCurrentImageBase(), 0);
+            return 0;
+        }
+
         LRESULT WINAPI WndProc(const HWND hWnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
         {
             WndProcGuard guard;
@@ -55,22 +73,7 @@ namespace InputHook
                     // Signal only: the window thread must leave this DLL before
                     // the library is freed, so the unload runs on its own
                     // thread (which first removes the subclass).
-                    HANDLE hThread = CreateThread(
-                        nullptr, 0,
-                        [](LPVOID) -> DWORD {
-                            Remove();
-                            const auto deadline =
-                                std::chrono::steady_clock::now() + std::chrono::seconds(1);
-                            while (g_inWndProc > 0 && std::chrono::steady_clock::now() < deadline)
-                                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                            if (g_inWndProc > 0)
-                                Logger::Error("[Input] Unload: threads still inside the DLL");
-                            if (g_unloadHandler)
-                                g_unloadHandler();
-                            FreeLibraryAndExitThread(DllHelper::GetCurrentImageBase(), 0);
-                            return 0;
-                        },
-                        nullptr, 0, nullptr);
+                    HANDLE hThread = CreateThread(nullptr, 0, UnloadThread, nullptr, 0, nullptr);
                     if (hThread)
                         CloseHandle(hThread);
                     return 0;

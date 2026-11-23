@@ -16,6 +16,19 @@
       "dx11-binding",
       "dx12-binding"
     ],
+    "platform": "!x86",
+    "version>=" : "1.93.0"
+  }, {
+    "name" : "imgui",
+    "features": [
+      "win32-binding",
+      "opengl3-binding",
+      "vulkan-binding",
+      "dx9-binding",
+      "dx10-binding",
+      "dx11-binding"
+    ],
+    "platform": "x86",
     "version>=" : "1.93.0"
   }, {
     "name" : "minhook",

@@ -92,13 +92,26 @@ MSVC 分支使用 `x64-windows-static` 三元组和静态 CRT（`MultiThreaded`�
 
 ### 32 位目标
 
-顶层 `CMakeLists.txt` 里修改：
+配置时手动指定 `BUILD_ARCH`（默认 `x64`）：
 
-```cmake
-set(BUILD_ARCH "x86")
+```bash
+# MinGW
+cmake -B build-x86 -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE="$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake" \
+  -DCMAKE_C_COMPILER=i686-w64-mingw32-gcc \
+  -DCMAKE_CXX_COMPILER=i686-w64-mingw32-g++ \
+  -DBUILD_ARCH=x86 \
+  -DCMAKE_BUILD_TYPE=Release
 ```
 
-同时把 vcpkg 三元组换成 `x86-mingw-static` / `x86-windows-static`。x86 下不构建 DX12 后端。
+```powershell
+# MSVC：生成器平台和 BUILD_ARCH 必须一致
+cmake -B build -G "Visual Studio 17 2022" -A Win32 `
+  -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+  -DBUILD_ARCH=x86
+```
+
+vcpkg 三元组由 `BUILD_ARCH` 自动选成 `x86-mingw-static` / `x86-windows-static`。x86 下不构建 DX12 后端。
 
 ### 产物位置
 

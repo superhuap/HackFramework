@@ -2,11 +2,9 @@ cmake_minimum_required(VERSION 4.1)
 
 set(CMAKE_SYSTEM_NAME Windows)
 
-if(CMAKE_CXX_COMPILER MATCHES "i[3-6]86")
-    set(BUILD_ARCH "x86" CACHE STRING "目标架构：x86 = 32位，x64 = 64位")
-else()
-    set(BUILD_ARCH "x64" CACHE STRING "目标架构：x86 = 32位，x64 = 64位")
-endif()
+# 目标架构需要手动指定（x86 = 32位，x64 = 64位）：-DBUILD_ARCH=x86。
+# MSVC 下要同时用 -A Win32 / -A x64 指定生成器平台，两边保持一致。
+set(BUILD_ARCH "x64" CACHE STRING "目标架构：x86 = 32位，x64 = 64位")
 
 if(CMAKE_HOST_WIN32)
     set(VCPKG_TARGET_TRIPLET "${BUILD_ARCH}-windows-static")

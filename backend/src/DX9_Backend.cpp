@@ -422,6 +422,13 @@ bool DX9_Backend::Initialize()
     if (!hooked)
     {
         Logger::Critical("[DX9] Install: no hook installed");
+        // A hook that did install must not outlive this module.
+        HookHelper::UninstallAll(g_installedHooks);
+        if (g_module)
+        {
+            FreeLibrary(g_module);
+            g_module = nullptr;
+        }
         return false;
     }
 

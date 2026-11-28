@@ -886,6 +886,16 @@ bool DX12_Backend::Initialize()
     if (!hooked)
     {
         Logger::Critical("[DX12] Install: no hook installed");
+        // A hook that did install must not outlive this module.
+        HookHelper::UninstallAll(g_installedHooks);
+        for (HMODULE* module : {&g_module, &g_dxgiModule})
+        {
+            if (*module)
+            {
+                FreeLibrary(*module);
+                *module = nullptr;
+            }
+        }
         return false;
     }
 

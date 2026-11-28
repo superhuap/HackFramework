@@ -276,25 +276,46 @@ bool OPENGL_Backend::Initialize()
     if (!g_getCurrentContext || !swapBuffers || !deleteContext)
     {
         Logger::Error("[OpenGL] Install: opengl32.dll not loadable");
+        if (g_module)
+        {
+            FreeLibrary(g_module);
+            g_module = nullptr;
+        }
         return false;
     }
 
-    bool hooked = HookHelper::InstallHook("wglDeleteContext", deleteContext,
-                                          reinterpret_cast<void*>(&HookDeleteContext),
-                                          reinterpret_cast<void**>(&g_deleteContext));
-    if (hooked)
-        g_installedHooks.push_back({"wglDeleteContext", deleteContext});
-    hooked = HookHelper::InstallHook("wglSwapBuffers", swapBuffers, reinterpret_cast<void*>(&HookSwapBuffers),
-                                     reinterpret_cast<void**>(&g_swapBuffers)) &&
-             hooked;
-    if (hooked)
-        g_installedHooks.push_back({"wglSwapBuffers", swapBuffers});
-
-    if (!hooked)
+    if (!HookHelper::InstallHook("wglDeleteContext", deleteContext,
+                                 reinterpret_cast<void*>(&HookDeleteContext),
+                                 reinterpret_cast<void**>(&g_deleteContext)))
     {
-        Logger::Critical("[OpenGL] Install: no hook installed");
+        Logger::Critical("[OpenGL] Install: wglDeleteContext hook failed");
+        if (g_module)
+        {
+            FreeLibrary(g_module);
+            g_module = nullptr;
+        }
         return false;
     }
+    g_installedHooks.push_back({"wglDeleteContext", deleteContext});
+
+    if (!HookHelper::InstallHook("wglSwapBuffers", swapBuffers, reinterpret_cast<void*>(&HookSwapBuffers),
+                                 reinterpret_cast<void**>(&g_swapBuffers)))
+    {
+        // Roll back the hook that did install: Initialize() returns false and
+        // the caller unloads the DLL, so a hook left pointing into it would
+        // jump into freed code.
+        Logger::Critical("[OpenGL] Install: wglSwapBuffers hook failed");
+        for (const HookEntry& hook : g_installedHooks)
+            HookHelper::UninstallHook(hook.name, hook.target);
+        g_installedHooks.clear();
+        if (g_module)
+        {
+            FreeLibrary(g_module);
+            g_module = nullptr;
+        }
+        return false;
+    }
+    g_installedHooks.push_back({"wglSwapBuffers", swapBuffers});
 
     Logger::Debug("[OpenGL] Install: {} hook(s) active", g_installedHooks.size());
     return true;

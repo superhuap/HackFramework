@@ -364,6 +364,10 @@ bool DX11_Backend::Initialize()
     if (!hooked)
     {
         Logger::Critical("[DX11] Install: no hook installed");
+        // A hook that did install must not outlive this module.
+        HookHelper::UninstallAll(g_installedHooks);
+        if (module)
+            FreeLibrary(module);
         return false;
     }
 

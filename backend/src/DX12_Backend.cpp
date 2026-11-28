@@ -96,9 +96,10 @@ namespace
         ID3D12CommandQueue* queue;
     };
 
+    // Only the queue is stored: it keeps its device alive, while the old
+    // `device` field was filled after its reference had been released.
     struct DirectQueue
     {
-        ID3D12Device* device;
         ID3D12CommandQueue* queue;
     };
 
@@ -209,7 +210,7 @@ namespace
             g_directQueues.erase(g_directQueues.begin());
         }
         queue->AddRef();
-        g_directQueues.push_back({device, queue});
+        g_directQueues.push_back({queue});
     }
 
     bool OnRemovedDevice(ID3D12CommandQueue* queue)
@@ -248,10 +249,12 @@ namespace
         ID3D12Device* device = nullptr;
         if (FAILED(swapChain->GetDevice(IID_PPV_ARGS(&device))))
             return nullptr;
-        HRESULT removed = device->GetDeviceRemovedReason();
-        device->Release();
+        const HRESULT removed = device->GetDeviceRemovedReason();
         if (FAILED(removed))
+        {
+            device->Release();
             return nullptr;
+        }
 
         std::lock_guard<std::mutex> lock(g_queueMutex);
         ID3D12CommandQueue* queue = nullptr;
@@ -266,12 +269,22 @@ namespace
         }
         for (const DirectQueue& entry : g_directQueues)
         {
-            if (known || entry.device != device)
+            if (known)
+                break;
+            // Query the device through the queue, which keeps it alive, instead
+            // of comparing against a device pointer stored after its Release().
+            ID3D12Device* queueDevice = nullptr;
+            if (FAILED(entry.queue->GetDevice(IID_PPV_ARGS(&queueDevice))))
+                continue;
+            const bool sameDevice = queueDevice == device;
+            queueDevice->Release();
+            if (!sameDevice)
                 continue;
             queue = entry.queue;
             if (queue == LastQueueOfThread())
                 break;
         }
+        device->Release();
         if (queue)
             queue->AddRef();
         return queue;

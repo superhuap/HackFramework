@@ -115,7 +115,7 @@ namespace Feature
         std::lock_guard<std::mutex> lock(m_mutex);
         for (const auto& owned : m_features)
         {
-            if (owned && owned->GetEnabled())
+            if (owned && owned->IsEnabled())
                 owned->OnDraw();
         }
     }
@@ -135,9 +135,10 @@ namespace Feature
             if (!feature)
                 continue;
 
-            bool& enabled = feature->GetEnabled();
-            bool was_enabled = enabled;
-            ImGui::Checkbox(feature->GetName(), &enabled);
+            bool enabled = feature->IsEnabled();
+            const bool was_enabled = enabled;
+            if (ImGui::Checkbox(feature->GetName(), &enabled))
+                feature->SetEnabled(enabled);
 
             if (!was_enabled && enabled)
                 NotifyFeature(feature);

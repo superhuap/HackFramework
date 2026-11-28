@@ -6,6 +6,8 @@
 #ifndef HACKFRAMEWORK_IFEATURE_H
 #define HACKFRAMEWORK_IFEATURE_H
 
+#include <atomic>
+
 namespace Feature
 {
 
@@ -41,10 +43,11 @@ namespace Feature
         // 当前窗口的控件（ImGui::Text / Button 等）。
         virtual void OnDraw() = 0;
 
-        // checkbox 绑定：返回对勾选状态的引用。
+        // 开关状态：渲染线程写，feature 后台线程读，所以用原子变量。
         // 开关状态由框架统一保存在 m_enabled 中，派生类无需再声明成员或实现本函数；
         // 仅在需要自定义开关逻辑时才 override。
-        virtual bool& GetEnabled() { return m_enabled; }
+        virtual bool IsEnabled() const { return m_enabled.load(std::memory_order_relaxed); }
+        virtual void SetEnabled(bool enabled) { m_enabled.store(enabled, std::memory_order_relaxed); }
 
         // 渲染线程：配置面板（颜色、大小等），仅在菜单显示且功能启用时调用
         virtual void DrawOptions() = 0;
@@ -60,8 +63,9 @@ namespace Feature
         virtual bool HasUpdateThread() const { return false; }
 
     protected:
-        // 功能启用状态，由 Manager 通过 GetEnabled() 读写
-        bool m_enabled = false;
+        // 功能启用状态，由 Manager 通过 IsEnabled()/SetEnabled() 读写。
+        // 渲染线程与 feature 后台线程都会访问，必须是原子变量。
+        std::atomic<bool> m_enabled{false};
     };
 
 } // namespace Feature

@@ -53,8 +53,14 @@ namespace InputHook
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
             if (g_inWndProc > 0)
                 Logger::Error("[Input] Unload: threads still inside the DLL");
-            if (g_unloadHandler)
-                g_unloadHandler();
+            if (g_unloadHandler && !g_unloadHandler())
+            {
+                // A hook callback is still running: do not free the module.
+                // Re-arm the hotkey so the unload can be retried once it drains.
+                shutting_down.store(false);
+                Logger::Error("[Input] Unload: aborted, the library stays loaded");
+                return 0;
+            }
             FreeLibraryAndExitThread(DllHelper::GetCurrentImageBase(), 0);
             return 0;
         }

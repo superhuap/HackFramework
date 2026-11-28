@@ -16,7 +16,9 @@ namespace InputHook
     inline std::atomic<bool> shutting_down{false};
 
     using RehookHandler = void (*)(HWND staleWindow);
-    using UnloadHandler = void (*)();
+    // Returns false when the library must stay loaded: a hook callback did not
+    // drain in time, so freeing the module would free code a thread still runs.
+    using UnloadHandler = bool (*)();
 
     // Register the handlers before the hooks bind a window. The rehook handler
     // may be null: the overlay rebinds itself at the next present of a new

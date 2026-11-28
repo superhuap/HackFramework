@@ -314,7 +314,14 @@ void OPENGL_Backend::Shutdown()
         Core::TeardownOnRenderThread(&Teardown, 1000);
         for (const HookEntry& hook : g_installedHooks)
             HookHelper::DisableHook(hook.name, hook.target);
-        Core::WaitForIdleHooks(2000);
+        if (!Core::WaitForIdleHooks(2000))
+        {
+            // A detour is still running: removing its trampoline would free
+            // code a thread is executing. Leave the hooks disabled; the unload
+            // path keeps the library loaded until they drain.
+            Logger::Error("[OpenGL] Shutdown: hooks still running, left disabled");
+            return;
+        }
         for (const HookEntry& hook : g_installedHooks)
             HookHelper::UninstallHook(hook.name, hook.target);
         g_installedHooks.clear();

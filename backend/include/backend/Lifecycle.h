@@ -14,7 +14,9 @@ namespace Lifecycle
     DWORD WINAPI OnProcessAttach(LPVOID);
 
     // Full stop of the overlay and the hooks, for the unload path.
-    void PrepareUnload();
+    // Returns false when a hook callback did not drain: the caller must keep
+    // the library loaded, since freeing it would free code a thread still runs.
+    bool PrepareUnload();
 
 } // namespace Lifecycle
 

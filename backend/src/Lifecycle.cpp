@@ -13,6 +13,7 @@
 
 #include "backend/BackendFactory.h"
 #include "backend/IRenderBackend.h"
+#include "core/ScopedCall.h"
 #include "utils/DllHelper.h"
 #include "utils/InputHook.h"
 #include "utils/Logger.h"
@@ -36,17 +37,29 @@ namespace Lifecycle
 
     // Runs on the thread that asked for the unload (never DllMain): stops the
     // overlay and the hooks, then lets the caller free the DLL.
-    void PrepareUnload()
+    bool PrepareUnload()
     {
         std::lock_guard<std::mutex> lock(g_lifecycleMutex);
-        if (!g_backend)
-            return;
 
-        Logger::Debug("[HF] Unload: stopping the overlay");
-        InputHook::shutting_down.store(true);
-        InputHook::Remove();
-        g_backend->Shutdown();
-        g_backend.reset();
+        if (g_backend)
+        {
+            Logger::Debug("[HF] Unload: stopping the overlay");
+            InputHook::shutting_down.store(true);
+            InputHook::Remove();
+            g_backend->Shutdown();
+            g_backend.reset();
+        }
+
+        // Every detour must have left before MinHook frees the trampolines and
+        // the caller frees this module. Checked here as well as in each
+        // backend: a backend that gave up early leaves its hooks disabled, and
+        // this is the last gate before the unload.
+        if (!Core::WaitForIdleHooks(2000))
+        {
+            Logger::Error("[HF] Unload: a thread is still inside a hook, the library stays loaded");
+            return false;
+        }
+
         // The hooks are gone; when this module owned MinHook, release it before
         // the library is freed. A MinHook the process already had stays with
         // its owner.
@@ -56,6 +69,7 @@ namespace Lifecycle
             g_ownsMinHook = false;
         }
         Logger::Shutdown();
+        return true;
     }
 
     DWORD WINAPI OnProcessAttach(LPVOID)

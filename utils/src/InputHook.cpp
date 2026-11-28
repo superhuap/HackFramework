@@ -22,7 +22,10 @@ namespace InputHook
     {
 
         HWND g_window = nullptr;
-        WNDPROC g_originalWndProc = nullptr;
+        // Written by Install()/Remove() and read at the tail of an in-flight
+        // WndProc: an atomic snapshot is what keeps that tail from calling a
+        // null pointer after Remove() cleared it.
+        std::atomic<WNDPROC> g_originalWndProc{nullptr};
         RehookHandler g_rehookHandler = nullptr;
         UnloadHandler g_unloadHandler = nullptr;
 
@@ -59,6 +62,9 @@ namespace InputHook
         LRESULT WINAPI WndProc(const HWND hWnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
         {
             WndProcGuard guard;
+            // Remove() may clear the member while this call is still in flight,
+            // so the tail chains to a snapshot taken on entry.
+            const WNDPROC original = g_originalWndProc.load();
 
             if (uMsg == WM_KEYDOWN)
             {
@@ -92,7 +98,12 @@ namespace InputHook
                 ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam);
             }
 
-            return CallWindowProc(g_originalWndProc, hWnd, uMsg, wParam, lParam);
+            if (original)
+                return CallWindowProc(original, hWnd, uMsg, wParam, lParam);
+            // Unsubclassed while this message was in flight: there is no
+            // original procedure left to chain to, so fall back to the default.
+            return IsWindowUnicode(hWnd) ? DefWindowProcW(hWnd, uMsg, wParam, lParam)
+                                         : DefWindowProcA(hWnd, uMsg, wParam, lParam);
         }
 
     } // namespace
@@ -105,7 +116,7 @@ namespace InputHook
 
     void Install(HWND hWnd)
     {
-        if (!hWnd || g_originalWndProc)
+        if (!hWnd || g_originalWndProc.load())
             return;
         g_window = hWnd;
         g_originalWndProc = reinterpret_cast<WNDPROC>(
@@ -115,8 +126,9 @@ namespace InputHook
 
     void Remove()
     {
-        if (g_originalWndProc && g_window)
-            SetWindowLongPtrW(g_window, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(g_originalWndProc));
+        const WNDPROC original = g_originalWndProc.load();
+        if (original && g_window)
+            SetWindowLongPtrW(g_window, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(original));
         g_originalWndProc = nullptr;
         g_window = nullptr;
     }

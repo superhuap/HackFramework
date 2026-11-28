@@ -36,6 +36,11 @@ namespace Feature
     {
         std::lock_guard<std::mutex> lock(m_mutex);
 
+        // Only the first Start() initializes: a second call would otherwise run
+        // Initialize() again on every feature and then return early.
+        if (m_running.exchange(true))
+            return;
+
         for (const auto& owned : m_features)
         {
             IFeature* feature = owned.get();
@@ -43,14 +48,18 @@ namespace Feature
                 Logger::Error("[Feature] Initialize: '{}' failed", feature->GetName());
         }
 
-        if (m_running.exchange(true))
-            return;
-
         for (const auto& owned : m_features)
         {
             IFeature* feature = owned.get();
-            if (feature && feature->HasUpdateThread())
-                m_threads[feature].thread = std::thread(&Manager::TickUpdateLoop, this, feature);
+            if (!feature || !feature->HasUpdateThread())
+                continue;
+
+            // Insert first, then hand the stable node to the thread: the map is
+            // never touched from the feature thread.
+            auto [it, inserted] = m_threads.try_emplace(feature);
+            if (!inserted && it->second.thread.joinable())
+                continue;
+            it->second.thread = std::thread(&Manager::TickUpdateLoop, this, feature, &it->second);
         }
 
         Logger::Debug("[Feature] Start: {} feature(s)", m_features.size());
@@ -84,15 +93,14 @@ namespace Feature
         Logger::Debug("[Feature] Stop: done");
     }
 
-    void Manager::TickUpdateLoop(IFeature* feature)
+    void Manager::TickUpdateLoop(IFeature* feature, FeatureThread* ft)
     {
-        auto& ft = m_threads[feature];
         while (is_running())
         {
             {
-                std::unique_lock<std::mutex> lock(ft.mtx);
-                ft.cv.wait(lock, [&] {
-                    return !is_running() || feature->GetEnabled();
+                std::unique_lock<std::mutex> lock(ft->mtx);
+                ft->cv.wait(lock, [&] {
+                    return !is_running() || feature->IsEnabled();
                 });
             }
 

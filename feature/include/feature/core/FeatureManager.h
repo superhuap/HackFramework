@@ -58,15 +58,19 @@ namespace Feature
     private:
         Manager() = default;
 
-        void TickUpdateLoop(IFeature* feature);
-        void NotifyFeature(IFeature* feature);
-
+        // Declared before the tick function so the thread entry can take a
+        // stable pointer to it: an unordered_map never invalidates references
+        // to its elements, so the feature thread can wait without touching
+        // m_threads.
         struct FeatureThread
         {
             std::thread thread;
             std::mutex mtx;
             std::condition_variable cv;
         };
+
+        void TickUpdateLoop(IFeature* feature, FeatureThread* ft);
+        void NotifyFeature(IFeature* feature);
 
         static constexpr float kDefaultUpdateIntervalMs = 1000.f / 150.f; // ~6.67ms, 150次/秒
 
